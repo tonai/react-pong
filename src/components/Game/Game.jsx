@@ -3,11 +3,13 @@ import React, { PureComponent } from 'react';
 export class Game extends PureComponent {
 
   static defaultProps = {
+    playerWidth: 1,
+    playerOffset: 5,
     player1Height: 10,
     player1Speed: 0.1,
     player2Height: 10,
     player2Speed: 0.1,
-    ballWidth: 1,
+    ballWidth: 2,
   };
 
   state = {
@@ -73,8 +75,8 @@ export class Game extends PureComponent {
     const { ballWidth } = this.props;
     this.windowWidth = window.innerWidth;
     this.windowHeight = window.innerHeight;
-    this.maxWidth = window.innerWidth - ballWidth * window.innerWidth / 100;
-    this.maxHeight = window.innerHeight - ballWidth * window.innerWidth / 100;
+    this.maxWidth = window.innerWidth - ballWidth * window.innerHeight / 100;
+    this.maxHeight = window.innerHeight - ballWidth * window.innerHeight / 100;
   };
 
   step = (time) => {
@@ -115,9 +117,9 @@ export class Game extends PureComponent {
         const { player1Y } = state;
         return {
           ballX: 6 * this.windowWidth / 100,
-          ballY: (player1Y + player1Height / 2) * this.windowHeight / 100 - ballWidth / 2 * this.windowWidth / 100,
+          ballY: (player1Y + player1Height / 2 - ballWidth / 2) * this.windowHeight / 100,
           ballSpeed: 0.1,
-          ballAngle: Math.PI / 4,
+          ballAngle: Math.PI / 6,
         };
       }
 
@@ -126,20 +128,22 @@ export class Game extends PureComponent {
         const { player2Y } = state;
         return {
           ballX: 94 * this.windowWidth  / 100,
-          ballY: (player2Y + player2Height / 2) * this.windowHeight / 100 - ballWidth / 2 * this.windowWidth / 100,
+          ballY: (player2Y + player2Height / 2 - ballWidth / 2) * this.windowHeight / 100,
           ballSpeed: 0.1,
-          ballAngle: 3 * Math.PI / 4,
+          ballAngle: 5 * Math.PI / 6,
         };
       }
 
       case true: {
+        const { playerWidth, playerOffset } = this.props;
         const { ballX, ballY, ballAngle, ballSpeed } = state;
 
         const newState = {};
-        newState.ballX = (Math.cos(ballAngle) * ballSpeed * delta) * this.windowHeight / 100 + ballX;
+        newState.ballX = (Math.cos(ballAngle) * ballSpeed * delta) * this.windowWidth / 100 + ballX;
         newState.ballX = Math.max(Math.min(newState.ballX, this.maxWidth), 0);
         newState.ballY = (Math.sin(ballAngle) * ballSpeed * delta)  * this.windowHeight / 100 + ballY;
 
+        // Collision with top or bottom sides.
         if (newState.ballY < 0) {
           newState.ballY = - newState.ballY;
           newState.ballAngle = - ballAngle;
@@ -148,6 +152,19 @@ export class Game extends PureComponent {
           newState.ballAngle = - ballAngle;
         }
 
+        // Collision with player1.
+        if (ballX > (playerWidth + playerOffset) * this.windowWidth / 100 && newState.ballX <= (playerWidth + playerOffset) * this.windowWidth / 100) {
+          newState.ballX = 2 * (playerWidth + playerOffset) * this.windowWidth / 100 - newState.ballX;
+          newState.ballAngle = Math.PI - ballAngle;
+        }
+
+        // Collision with player2.
+        if (ballX < (100 - playerWidth - playerOffset) * this.windowWidth / 100 && newState.ballX >= (100 - playerWidth - playerOffset) * this.windowWidth / 100) {
+          newState.ballX = 2 * (100 - playerWidth - playerOffset) * this.windowWidth / 100 - newState.ballX;
+          newState.ballAngle = Math.PI - ballAngle;
+        }
+
+        // Collision with left or right sides.
         if (ballX <= 0) {
           this.start = false;
           newState.winner = 'player2';
@@ -163,7 +180,7 @@ export class Game extends PureComponent {
   }
 
   render() {
-    const { ballWidth, player1Height, player2Height } = this.props;
+    const { ballWidth, playerOffset, playerWidth, player1Height, player2Height } = this.props;
     const { ballX, ballY, player1Y, player2Y, winner } = this.state;
     const gameStyle = {
       background: winner === 'player1' ? 'green' :  winner === 'player2' ? 'red' : 'black',
@@ -174,26 +191,28 @@ export class Game extends PureComponent {
     const player1Style = {
       backgroundColor: 'white',
       position: 'absolute',
-      top: `${player1Y}%`,
-      left: '5%',
-      width: '1vw',
+      top: `${player1Y}vh`,
+      left: `${playerOffset}vw`,
+      width: `${playerWidth}vw`,
       height: `${player1Height}vh`,
+      //borderRadius: '0 50% 50% 0',
     };
     const player2Style = {
       backgroundColor: 'white',
       position: 'absolute',
-      top: `${player2Y}%`,
-      right: '5%',
-      width: '1vw',
+      top: `${player2Y}vh`,
+      right: `${playerOffset}vw`,
+      width: `${playerWidth}vw`,
       height: `${player2Height}vh`,
+      //borderRadius: '50% 0 0 50%',
     };
     const ballStyle = {
       backgroundColor: 'white',
       position: 'absolute',
       top: ballY,
       left: ballX,
-      width: `${ballWidth}vw`,
-      height: `${ballWidth}vw`,
+      width: `${ballWidth}vh`,
+      height: `${ballWidth}vh`,
       borderRadius: '50%',
     };
 
