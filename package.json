@@ -1,5 +1,5 @@
 {
-  "name": "pong",
+  "name": "react-pong",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
