@@ -106,6 +106,7 @@ export class Game extends PureComponent {
     }
     this.time = time;
     requestAnimationFrame(this.step);
+    this.props.onEachStep && this.props.onEachStep(time);
   };
 
   constructor(props) {
