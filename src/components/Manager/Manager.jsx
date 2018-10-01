@@ -1,6 +1,8 @@
 import React, { PureComponent } from 'react';
 
+import { Fps } from '../Fps/Fps';
 import { Game } from '../Game/Game';
+import { Score } from '../Score/Score';
 
 export class Manager extends PureComponent {
 
@@ -9,18 +11,9 @@ export class Manager extends PureComponent {
   };
 
   state = {
-    frames: [],
     scorePlayer1: 0,
     scorePlayer2: 0,
     startPlayer: 'player1'
-  };
-
-  onEachStep = time => {
-    this.setState(state => {
-      const frames = state.frames.filter(frame => frame > time - 1000);
-      frames.push(time);
-      return { frames };
-    });
   };
 
   onEnd = winner => {
@@ -37,30 +30,23 @@ export class Manager extends PureComponent {
     }
   };
 
-  step = (time) => {
-    this.onEachStep(time);
-    requestAnimationFrame(this.step);
-  };
-
-  componentDidMount() {
-    const { displayFps } = this.props;
-    if (displayFps) {
-      requestAnimationFrame(this.step);
-    }
-  }
-
   render() {
     const { displayFps } = this.props;
-    const { frames, scorePlayer1, scorePlayer2, startPlayer } = this.state;
+    const { scorePlayer1, scorePlayer2, startPlayer } = this.state;
 
     const managerStyle = {
       position: 'relative'
     };
-    const counterStyle = {
-      color: 'white',
-      left: '10px',
+    const separatorStyle = {
+      bottom: 0,
+      borderColor: 'white',
+      borderStyle: 'dashed',
+      borderWidth: '0 2px 0 0',
+      left: '50vw',
       position: 'absolute',
-      top: '10px'
+      top: 0,
+      transform: 'transformX(-1px)',
+      width: 0
     };
 
     return (
@@ -70,7 +56,9 @@ export class Manager extends PureComponent {
           onEnd={this.onEnd}
           startPlayer={startPlayer}
         />
-        {displayFps && (<div style={counterStyle}>{frames.length}</div>)}
+        <Score scorePlayer1={scorePlayer1} scorePlayer2={scorePlayer2} />
+        <div style={separatorStyle} />
+        {displayFps && (<Fps/>)}
       </div>
     );
   }
