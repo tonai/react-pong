@@ -78,11 +78,20 @@ export class Game extends PureComponent {
   };
 
   resize = () => {
-    const { ballWidth } = this.props;
+    const { ballWidth, playerWidth, player1Height, player2Height  } = this.props;
+
     this.windowWidth = window.innerWidth;
     this.windowHeight = window.innerHeight;
     this.maxWidth = window.innerWidth - ballWidth * window.innerHeight / 100;
     this.maxHeight = window.innerHeight - ballWidth * window.innerHeight / 100;
+
+    const a1 = Math.atan(player1Height / 2 / playerWidth);
+    const b1 = Math.PI - 2 * a1;
+    this.r1 = player1Height / (2 * Math.sin(b1)) * this.windowHeight / 100;
+
+    const a2 = Math.atan(player2Height / 2 / playerWidth);
+    const b2 = Math.PI - 2 * a2;
+    this.r2 = player2Height / (2 * Math.sin(b2)) * this.windowHeight / 100;
   };
 
   step = (time) => {
@@ -111,18 +120,7 @@ export class Game extends PureComponent {
 
   constructor(props) {
     super(props);
-    const { playerWidth, player1Height, player2Height } = props;
-
     this.resize();
-
-    const a1 = Math.atan(player1Height / 2 / playerWidth);
-    const b1 = Math.PI - 2 * a1;
-    this.r1 = player1Height / (2 * Math.sin(b1)) * this.windowHeight / 100;
-
-    const a2 = Math.atan(player2Height / 2 / playerWidth);
-    const b2 = Math.PI - 2 * a2;
-    this.r2 = player2Height / (2 * Math.sin(b2)) * this.windowHeight / 100;
-
     this.state.ballSpeed = props.ballSpeed;
   }
 
