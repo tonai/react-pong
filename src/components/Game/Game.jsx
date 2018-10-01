@@ -1,5 +1,7 @@
 import React, { PureComponent } from 'react';
 
+const END_TIMEOUT = 500;
+
 export class Game extends PureComponent {
 
   static defaultProps = {
@@ -11,6 +13,8 @@ export class Game extends PureComponent {
     player2Speed: 0.1,
     ballWidth: 2,
     ballSpeed: 0.05,
+    startPlayer: 'player1',
+    gameKey: '0-0',
   };
 
   state = {
@@ -20,7 +24,6 @@ export class Game extends PureComponent {
     ballY: 0,
     ballSpeed: 0,
     ballAngle: 0,
-    winner: false,
   };
 
   player1Up = false;
@@ -36,7 +39,7 @@ export class Game extends PureComponent {
   maxHeight = 0;
 
   time = null;
-  start = 'player1';
+  stage = 'init';
 
   keyDown = (e) => {
     switch (e.code) {
@@ -54,10 +57,7 @@ export class Game extends PureComponent {
 
       case 'Space':
       case 'Enter':
-        const { winner } = this.state;
-        if (!winner) {
-          return this.start = true;
-        }
+        return this.stage = 'start';
     }
   };
 
@@ -113,9 +113,11 @@ export class Game extends PureComponent {
 
       this.setState(this.getBallPosition.bind(this, delta));
     }
+
     this.time = time;
-    requestAnimationFrame(this.step);
-    this.props.onEachStep && this.props.onEachStep(time);
+    if (this.stage !== 'end') {
+      requestAnimationFrame(this.step);
+    }
   };
 
   constructor(props) {
@@ -131,9 +133,64 @@ export class Game extends PureComponent {
     requestAnimationFrame(this.step);
   }
 
+  componentDidUpdate(prevProps) {
+    if (prevProps.gameKey !== this.props.gameKey) {
+      this.init();
+    }
+  }
+
   getBallPosition(delta, state) {
-    switch (this.start) {
-      case 'player1': {
+    if (this.stage === 'start') {
+      const { playerWidth, playerOffset, player1Height, player2Height } = this.props;
+      const { ballX, ballY, ballAngle, ballSpeed, player1Y, player2Y } = state;
+
+      const newState = {};
+      newState.ballX = (Math.cos(ballAngle) * ballSpeed * delta) * this.windowWidth / 100 + ballX;
+      newState.ballX = Math.max(Math.min(newState.ballX, this.maxWidth), 0);
+      newState.ballY = (Math.sin(ballAngle) * ballSpeed * delta)  * this.windowHeight / 100 + ballY;
+
+      // Collision with top or bottom sides.
+      if (newState.ballY < 0) {
+        newState.ballY = - newState.ballY;
+        newState.ballAngle = - ballAngle;
+      } else if (newState.ballY > this.maxHeight) {
+        newState.ballY = 2 * this.maxHeight - newState.ballY;
+        newState.ballAngle = - ballAngle;
+      }
+
+      // Collision with player1.
+      this.managePlayerCollision(
+        state,
+        newState,
+        playerOffset * this.windowWidth / 100 + playerWidth * this.windowHeight / 100 - this.r1,
+        player1Y * this.windowHeight / 100 + player1Height * this.windowHeight / 100 / 2,
+        this.r1,
+        player1Y * this.windowHeight / 100,
+        player1Height * this.windowHeight / 100
+      );
+
+      // Collision with player2.
+      this.managePlayerCollision(
+        state,
+        newState,
+        this.windowWidth - playerOffset * this.windowWidth / 100 - playerWidth * this.windowHeight / 100 + this.r2,
+        player2Y * this.windowHeight / 100 + player2Height * this.windowHeight / 100 / 2,
+        this.r2,
+        player2Y * this.windowHeight / 100,
+        player2Height * this.windowHeight / 100
+      );
+
+      // Collision with left or right sides.
+      if (ballX <= 0) {
+        this.onEnd('player2');
+      } else
+      if (ballX >= this.maxWidth) {
+        this.onEnd('player1');
+      }
+
+      return newState;
+    } else if (this.stage === 'init') {
+      if (this.props.startPlayer === 'player1') {
         const { ballWidth, playerWidth, playerOffset, player1Height } = this.props;
         const { player1Y } = state;
         return {
@@ -141,69 +198,14 @@ export class Game extends PureComponent {
           ballY: (player1Y + player1Height / 2 - ballWidth / 2) * this.windowHeight / 100,
           ballAngle: Math.PI / 6,
         };
-      }
-
-      case 'player2': {
+      } else {
         const { ballWidth, playerWidth, playerOffset, player2Height } = this.props;
         const { player2Y } = state;
         return {
-          ballX: this.windowWidth - playerOffset * this.windowWidth / 100 - playerWidth * this.windowHeight / 100,
+          ballX: this.windowWidth - playerOffset * this.windowWidth / 100 - playerWidth * this.windowHeight / 100 - ballWidth * this.windowHeight / 100,
           ballY: (player2Y + player2Height / 2 - ballWidth / 2) * this.windowHeight / 100,
           ballAngle: 5 * Math.PI / 6,
         };
-      }
-
-      case true: {
-        const { playerWidth, playerOffset, player1Height, player2Height } = this.props;
-        const { ballX, ballY, ballAngle, ballSpeed, player1Y, player2Y } = state;
-
-        const newState = {};
-        newState.ballX = (Math.cos(ballAngle) * ballSpeed * delta) * this.windowWidth / 100 + ballX;
-        newState.ballX = Math.max(Math.min(newState.ballX, this.maxWidth), 0);
-        newState.ballY = (Math.sin(ballAngle) * ballSpeed * delta)  * this.windowHeight / 100 + ballY;
-
-        // Collision with top or bottom sides.
-        if (newState.ballY < 0) {
-          newState.ballY = - newState.ballY;
-          newState.ballAngle = - ballAngle;
-        } else if (newState.ballY > this.maxHeight) {
-          newState.ballY = 2 * this.maxHeight - newState.ballY;
-          newState.ballAngle = - ballAngle;
-        }
-
-        // Collision with player1.
-        this.managePlayerCollision(
-          state,
-          newState,
-          playerOffset * this.windowWidth / 100 + playerWidth * this.windowHeight / 100 - this.r1,
-          player1Y * this.windowHeight / 100 + player1Height * this.windowHeight / 100 / 2,
-          this.r1,
-          player1Y * this.windowHeight / 100,
-          player1Height * this.windowHeight / 100
-        );
-
-        // Collision with player2.
-        this.managePlayerCollision(
-          state,
-          newState,
-          this.windowWidth - playerOffset * this.windowWidth / 100 - playerWidth * this.windowHeight / 100 + this.r2,
-          player2Y * this.windowHeight / 100 + player2Height * this.windowHeight / 100 / 2,
-          this.r2,
-          player2Y * this.windowHeight / 100,
-          player2Height * this.windowHeight / 100
-        );
-
-        // Collision with left or right sides.
-        if (ballX <= 0) {
-          this.start = false;
-          newState.winner = 'player2';
-        } else
-        if (ballX >= this.maxWidth) {
-          this.start = false;
-          newState.winner = 'player1';
-        }
-
-        return newState;
       }
     }
   }
@@ -235,6 +237,11 @@ export class Game extends PureComponent {
       X,
       Y: A * X + B
     };
+  }
+
+  init() {
+    this.stage = 'init';
+    requestAnimationFrame(this.step);
   }
 
   managePlayerCollision(state, newState, cx, cy, radius, playerY, playerHeight) {
@@ -285,11 +292,17 @@ export class Game extends PureComponent {
     }
   }
 
+  onEnd(winner) {
+    const { onEnd } = this.props;
+    this.stage = 'end';
+    setTimeout(() => onEnd(winner), END_TIMEOUT);
+  }
+
   render() {
     const { ballWidth, playerOffset, playerWidth, player1Height, player2Height } = this.props;
-    const { ballX, ballY, player1Y, player2Y, winner } = this.state;
+    const { ballX, ballY, player1Y, player2Y } = this.state;
     const gameStyle = {
-      background: winner === 'player1' ? 'green' :  winner === 'player2' ? 'red' : 'black',
+      background: 'black',
       position: 'relative',
       width: '100vw',
       height: '100vh',
@@ -326,7 +339,6 @@ export class Game extends PureComponent {
         <svg style={player2Style} viewBox={`0 0 ${playerWidth} ${player1Height}`}>
           <path d={`M ${playerWidth},0 A ${this.r2 * 100 / this.windowHeight},${this.r2 * 100 / this.windowHeight} 1 0,0 ${playerWidth},${player1Height} z`} fill="white" />
         </svg>
-        <div style={player2Style}/>
         <div style={ballStyle}/>
       </div>
     );
