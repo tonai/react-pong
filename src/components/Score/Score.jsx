@@ -36,7 +36,7 @@ export class Score extends PureComponent {
     const pathStyle = {
       stroke: 'white',
       strokeWidth: '0.1px',
-      transition: 'fill 400ms'
+      transition: 'fill 500ms'
     };
 
     const fill1 = this.fillArray(scorePlayer1);

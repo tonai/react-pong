@@ -1,0 +1,100 @@
+.Menu {
+  background: none;
+  bottom: 2vh;
+  border: none;
+  cursor: pointer;
+  height: 3.5vh;
+  padding: 0;
+  position: absolute;
+  right: 1vw;
+  width: 3vw;
+}
+
+.Menu__bar1 {
+  background-color: white;
+  height: 0.5vh;
+  left: 0;
+  position: absolute;
+  top: 0;
+  transition: all 500ms;
+  width: 3vw;
+}
+
+.Menu__bar2 {
+  background-color: white;
+  border-radius: 0;
+  height: 0.5vh;
+  left: 0;
+  position: absolute;
+  top: 1.5vh;
+  transform: translateX(0) translateY(0);
+  transition: all 500ms;
+  width: 3vw;
+}
+
+.Menu__bar3 {
+  background-color: white;
+  height: 0.5vh;
+  position: absolute;
+  right: 0;
+  top: 3vh;
+  transition: all 500ms;
+  width: 3vw;
+}
+
+.Menu__bar1.is-open {
+  animation: 10s linear 0.5s infinite player1;
+  width: 1.5vw;
+}
+
+.Menu__bar2.is-open {
+  animation: 5s linear 0.5s infinite alternate ball;
+  border-radius: 50%;
+  height: 0.5vh;
+  left: 0;
+  top: 0.5vh;
+  width: 0.5vh;
+}
+
+.Menu__bar3.is-open {
+  animation: 10s linear 0.5s infinite player2;
+  width: 1.5vw;
+}
+
+@keyframes player1 {
+  0% { left: 0; }
+  15% { left: 0; }
+  17.5% { left: 0.5vw; }
+  32.5% { left: 0.5vw; }
+  37.5% { left: 1.5vw; }
+  72.5% { left: 1.5vw; }
+  77.5% { left: 0.5vw; }
+  95% { left: 0.5vw; }
+  97.5% { left: 0; }
+  100% { left: 0; }
+}
+
+@keyframes player2 {
+  0% { right: 0; }
+  22.5% { right: 0; }
+  27.5% { right: 1vw; }
+  45% { right: 1vw; }
+  47.5% { right: 1.5vw; }
+  65% { right: 1.5vw; }
+  67.5% { right: 1vw; }
+  82.5% { right: 1vw; }
+  87.5% { right: 0; }
+  100% { right: 0; }
+}
+
+@keyframes ball {
+  0% { left: 0; top: 0.5vh; }
+  20% { left: 2vw; top: 2.5vh; }
+  25% { left: 2.5vw; top: 2vh; }
+  40% { left: 1vw; top: 0.5vh; }
+  50% { left: 0; top: 1.5vh; }
+  60% { left: 1vw; top: 2.5vh; }
+  75% { left: 2.5vw; top: 1vh; }
+  80% { left: 2vw; top: 0.5vh; }
+  100% { left: 0; top: 2.5vh; }
+}

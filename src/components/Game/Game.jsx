@@ -5,6 +5,7 @@ const END_TIMEOUT = 500;
 export class Game extends PureComponent {
 
   static defaultProps = {
+    pause: false,
     playerWidth: 2,
     playerOffset: 5,
     player1Height: 10,
@@ -42,43 +43,63 @@ export class Game extends PureComponent {
   stage = 'init';
 
   keyDown = (e) => {
+    const { settings, startPlayer } = this.props;
+
     switch (e.code) {
-      case 'KeyW':
-        return this.player1Up = true;
+      case settings.player1Up:
+        this.player1Up = true;
+        break;
 
-      case 'KeyS':
-        return this.player1Down = true;
+      case settings.player1Down:
+        this.player1Down = true;
+        break;
 
-      case 'ArrowUp':
-        return this.player2Up = true;
+      case settings.player2Up:
+        this.player2Up = true;
+        break;
 
-      case 'ArrowDown':
-        return this.player2Down = true;
+      case settings.player2Down:
+        this.player2Down = true;
+        break;
 
-      case 'Space':
-      case 'Enter':
-        return this.stage = 'start';
+      case settings.player1Launch:
+        if (startPlayer === 'player1') {
+          this.stage = 'start';
+        }
+        break;
+
+      case settings.player2Launch:
+        if (startPlayer === 'player2') {
+          this.stage = 'start';
+        }
+        break;
     }
   };
 
   keyUp = (e) => {
+    const { settings } = this.props;
+
     switch (e.code) {
-      case 'KeyW':
-        return this.player1Up = false;
+      case settings.player1Up:
+        this.player1Up = false;
+        break;
 
-      case 'KeyS':
-        return this.player1Down = false;
+      case settings.player1Down:
+        this.player1Down = false;
+        break;
 
-      case 'ArrowUp':
-        return this.player2Up = false;
+      case settings.player2Up:
+        this.player2Up = false;
+        break;
 
-      case 'ArrowDown':
-        return this.player2Down = false;
+      case settings.player2Down:
+        this.player2Down = false;
+        break;
     }
   };
 
   resize = () => {
-    const { ballWidth, playerWidth, player1Height, player2Height  } = this.props;
+    const { ballWidth, playerWidth, player1Height, player2Height } = this.props;
 
     this.windowWidth = window.innerWidth;
     this.windowHeight = window.innerHeight;
@@ -95,8 +116,9 @@ export class Game extends PureComponent {
   };
 
   step = (time) => {
+    const { player1Height, player1Speed, player2Height, player2Speed, pause } = this.props;
+
     if (this.time) {
-      const { player1Height, player1Speed, player2Height, player2Speed } = this.props;
       const delta = time - this.time;
 
       if (this.player1Down && !this.player1Up) {
@@ -115,8 +137,10 @@ export class Game extends PureComponent {
     }
 
     this.time = time;
-    if (this.stage !== 'end') {
+    if (this.stage !== 'end' && !pause) {
       requestAnimationFrame(this.step);
+    } else {
+      this.time = null;
     }
   };
 
@@ -136,6 +160,9 @@ export class Game extends PureComponent {
   componentDidUpdate(prevProps) {
     if (prevProps.gameKey !== this.props.gameKey) {
       this.init();
+    }
+    if (prevProps.pause && !this.props.pause) {
+      requestAnimationFrame(this.step);
     }
   }
 
