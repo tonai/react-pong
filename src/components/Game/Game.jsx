@@ -14,6 +14,7 @@ export class Game extends PureComponent {
     player2Speed: 0.1,
     ballWidth: 2,
     ballSpeed: 0.05,
+    ballAcceleration: 0.001,
     startPlayer: 'player1',
     gameKey: '0-0',
   };
@@ -116,7 +117,7 @@ export class Game extends PureComponent {
   };
 
   step = (time) => {
-    const { player1Height, player1Speed, player2Height, player2Speed, pause } = this.props;
+    const { player1Height, player1Speed, player2Height, player2Speed, pause, ballAcceleration } = this.props;
 
     if (this.time) {
       const delta = time - this.time;
@@ -133,7 +134,7 @@ export class Game extends PureComponent {
         this.setState(state => ({ player2Y: Math.max(state.player2Y - delta * player2Speed, 0) }));
       }
 
-      this.setState(this.getBallPosition.bind(this, delta));
+      this.setState(this.getBallState.bind(this, delta));
     }
 
     this.time = time;
@@ -166,9 +167,9 @@ export class Game extends PureComponent {
     }
   }
 
-  getBallPosition(delta, state) {
+  getBallState(delta, state) {
     if (this.stage === 'start') {
-      const { playerWidth, playerOffset, player1Height, player2Height } = this.props;
+      const { ballAcceleration, playerWidth, playerOffset, player1Height, player2Height } = this.props;
       const { ballX, ballY, ballAngle, ballSpeed, player1Y, player2Y } = state;
 
       const newState = {};
@@ -210,9 +211,13 @@ export class Game extends PureComponent {
       // Collision with left or right sides.
       if (ballX <= 0) {
         this.onEnd('player2');
+        newState.ballSpeed =  this.props.ballSpeed;
       } else
       if (ballX >= this.maxWidth) {
         this.onEnd('player1');
+        newState.ballSpeed =  this.props.ballSpeed;
+      } else {
+        newState.ballSpeed =  ballSpeed + ballAcceleration * delta / 1000;
       }
 
       return newState;
