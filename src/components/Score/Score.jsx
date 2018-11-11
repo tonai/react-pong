@@ -30,7 +30,7 @@ export class Score extends PureComponent {
       position: 'absolute',
       right: '25vw',
       top: '5vh',
-      transform: 'translateX(-50%)',
+      transform: 'translateX(50%)',
       width: '10vh',
     };
     const pathStyle = {

@@ -1,8 +1,8 @@
-import React, { Component } from 'react';
+import React, { PureComponent } from 'react';
 
 import './Menu.css';
 
-export class Menu extends Component {
+export class Menu extends PureComponent {
 
   openMenu = () => {
     const { onToggleMenu } = this.props;

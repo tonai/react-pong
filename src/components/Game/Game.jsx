@@ -1,5 +1,8 @@
 import React, { PureComponent } from 'react';
 
+import { Ball } from '../Ball/Ball';
+import { Player, PLAYER_LEFT, PLAYER_RIGHT } from '../Player/Player';
+
 const END_TIMEOUT = 500;
 
 export class Game extends PureComponent {
@@ -13,8 +16,8 @@ export class Game extends PureComponent {
     player2Height: 10,
     player2Speed: 0.1,
     ballWidth: 2,
-    ballSpeed: 0.05,
-    ballAcceleration: 0.001,
+    ballSpeed: 0.5,
+    ballAcceleration: 0.01,
     startPlayer: 'player1',
     gameKey: '0-0',
   };
@@ -26,6 +29,7 @@ export class Game extends PureComponent {
     ballY: 0,
     ballSpeed: 0,
     ballAngle: 0,
+    contact: 0
   };
 
   player1Up = false;
@@ -49,31 +53,34 @@ export class Game extends PureComponent {
     switch (e.code) {
       case settings.player1Up:
         this.player1Up = true;
-        break;
+        return;
 
       case settings.player1Down:
         this.player1Down = true;
-        break;
+        return;
 
       case settings.player2Up:
         this.player2Up = true;
-        break;
+        return;
 
       case settings.player2Down:
         this.player2Down = true;
-        break;
+        return;
 
       case settings.player1Launch:
         if (startPlayer === 'player1') {
           this.stage = 'start';
         }
-        break;
+        return;
 
       case settings.player2Launch:
         if (startPlayer === 'player2') {
           this.stage = 'start';
         }
-        break;
+        return;
+
+      default:
+        return;
     }
   };
 
@@ -83,19 +90,22 @@ export class Game extends PureComponent {
     switch (e.code) {
       case settings.player1Up:
         this.player1Up = false;
-        break;
+        return;
 
       case settings.player1Down:
         this.player1Down = false;
-        break;
+        return;
 
       case settings.player2Up:
         this.player2Up = false;
-        break;
+        return;
 
       case settings.player2Down:
         this.player2Down = false;
-        break;
+        return;
+
+      default:
+        return;
     }
   };
 
@@ -117,28 +127,15 @@ export class Game extends PureComponent {
   };
 
   step = (time) => {
-    const { player1Height, player1Speed, player2Height, player2Speed, pause, ballAcceleration } = this.props;
+    const { pause } = this.props;
 
     if (this.time) {
       const delta = time - this.time;
-
-      if (this.player1Down && !this.player1Up) {
-        this.setState(state => ({ player1Y: Math.min(state.player1Y + delta * player1Speed, 100 - player1Height) }));
-      } else if (!this.player1Down && this.player1Up) {
-        this.setState(state => ({ player1Y: Math.max(state.player1Y - delta * player1Speed, 0) }));
-      }
-
-      if (this.player2Down && !this.player2Up) {
-        this.setState(state => ({ player2Y: Math.min(state.player2Y + delta * player2Speed, 100 - player2Height) }));
-      } else if (!this.player2Down && this.player2Up) {
-        this.setState(state => ({ player2Y: Math.max(state.player2Y - delta * player2Speed, 0) }));
-      }
-
-      this.setState(this.getBallState.bind(this, delta));
+      this.setState(this.getState.bind(this, delta));
     }
 
     this.time = time;
-    if (this.stage !== 'end' && !pause) {
+    if (this.stage !== 'end' && !pause /*&& this.state.contact < 2*/) {
       requestAnimationFrame(this.step);
     } else {
       this.time = null;
@@ -149,6 +146,8 @@ export class Game extends PureComponent {
     super(props);
     this.resize();
     this.state.ballSpeed = props.ballSpeed;
+    this.state.player1Y = 50 - props.player1Height / 2;
+    this.state.player2Y = 50 - props.player2Height / 2;
   }
 
   componentDidMount() {
@@ -167,15 +166,35 @@ export class Game extends PureComponent {
     }
   }
 
-  getBallState(delta, state) {
-    if (this.stage === 'start') {
-      const { ballAcceleration, playerWidth, playerOffset, player1Height, player2Height } = this.props;
-      const { ballX, ballY, ballAngle, ballSpeed, player1Y, player2Y } = state;
+  getState(delta, state) {
+    const { ballAcceleration, ballWidth, player1Height, player1Speed, player2Height, player2Speed, playerWidth, playerOffset } = this.props;
+    const { ballX, ballY, ballAngle, ballSpeed, player1Y, player2Y } = state;
+    const newState = {};
 
-      const newState = {};
-      newState.ballX = (Math.cos(ballAngle) * ballSpeed * delta) * this.windowWidth / 100 + ballX;
+    if (state.contact) {
+      newState.contact = state.contact + 1;
+    }
+
+    if (this.player1Down && !this.player1Up) {
+      newState.player1Y = Math.min(player1Y + delta * player1Speed, 100 - player1Height);
+    } else if (!this.player1Down && this.player1Up) {
+      newState.player1Y = Math.max(player1Y - delta * player1Speed, 0);
+    } else {
+      newState.player1Y = player1Y;
+    }
+
+    if (this.player2Down && !this.player2Up) {
+      newState.player2Y = Math.min(player2Y + delta * player2Speed, 100 - player2Height);
+    } else if (!this.player2Down && this.player2Up) {
+      newState.player2Y = Math.max(player2Y - delta * player2Speed, 0);
+    } else {
+      newState.player2Y = player2Y;
+    }
+
+    if (this.stage === 'start') {
+      newState.ballX = Math.cos(ballAngle) * ballSpeed * delta + ballX;
       newState.ballX = Math.max(Math.min(newState.ballX, this.maxWidth), 0);
-      newState.ballY = (Math.sin(ballAngle) * ballSpeed * delta)  * this.windowHeight / 100 + ballY;
+      newState.ballY = Math.sin(ballAngle) * ballSpeed * delta + ballY;
 
       // Collision with top or bottom sides.
       if (newState.ballY < 0) {
@@ -192,9 +211,11 @@ export class Game extends PureComponent {
         newState,
         playerOffset * this.windowWidth / 100 + playerWidth * this.windowHeight / 100 - this.r1,
         player1Y * this.windowHeight / 100 + player1Height * this.windowHeight / 100 / 2,
+        newState.player1Y * this.windowHeight / 100 + player1Height * this.windowHeight / 100 / 2,
         this.r1,
         player1Y * this.windowHeight / 100,
-        player1Height * this.windowHeight / 100
+        player1Height * this.windowHeight / 100,
+        true
       );
 
       // Collision with player2.
@@ -203,9 +224,11 @@ export class Game extends PureComponent {
         newState,
         this.windowWidth - playerOffset * this.windowWidth / 100 - playerWidth * this.windowHeight / 100 + this.r2,
         player2Y * this.windowHeight / 100 + player2Height * this.windowHeight / 100 / 2,
+        newState.player2Y * this.windowHeight / 100 + player2Height * this.windowHeight / 100 / 2,
         this.r2,
         player2Y * this.windowHeight / 100,
-        player2Height * this.windowHeight / 100
+        player2Height * this.windowHeight / 100,
+        true
       );
 
       // Collision with left or right sides.
@@ -220,54 +243,83 @@ export class Game extends PureComponent {
         newState.ballSpeed =  ballSpeed + ballAcceleration * delta / 1000;
       }
 
-      return newState;
     } else if (this.stage === 'init') {
       if (this.props.startPlayer === 'player1') {
-        const { ballWidth, playerWidth, playerOffset, player1Height } = this.props;
-        const { player1Y } = state;
-        return {
-          ballX: playerOffset * this.windowWidth / 100 + playerWidth * this.windowHeight / 100,
-          ballY: (player1Y + player1Height / 2 - ballWidth / 2) * this.windowHeight / 100,
-          ballAngle: Math.PI / 6,
-        };
+        newState.ballX = playerOffset * this.windowWidth / 100 + playerWidth * this.windowHeight / 100;
+        newState.ballY = (newState.player1Y + player1Height / 2 - ballWidth / 2) * this.windowHeight / 100;
+        newState.ballAngle = Math.PI / 6;
       } else {
-        const { ballWidth, playerWidth, playerOffset, player2Height } = this.props;
-        const { player2Y } = state;
-        return {
-          ballX: this.windowWidth - playerOffset * this.windowWidth / 100 - playerWidth * this.windowHeight / 100 - ballWidth * this.windowHeight / 100,
-          ballY: (player2Y + player2Height / 2 - ballWidth / 2) * this.windowHeight / 100,
-          ballAngle: 5 * Math.PI / 6,
-        };
+        newState.ballX = this.windowWidth - playerOffset * this.windowWidth / 100 - playerWidth * this.windowHeight / 100 - ballWidth * this.windowHeight / 100;
+        newState.ballY = (newState.player2Y + player2Height / 2 - ballWidth / 2) * this.windowHeight / 100;
+        newState.ballAngle = 5 * Math.PI / 6;
       }
     }
+    
+    // Save previous state.
+    newState.oldState = state;
+    newState.oldOldState = state.oldState;
+    newState.oldOldOldState = state.oldOldState;
+
+    return newState;
   }
 
-  getContactPoint(A, B, R, cx, cy, dir) {
-    // Calculate coordinates of contact point :
-    // EQ1 : R^2 = (X-cx)^2 + (Y-cy)^2
-    // R = ballRadius+radius
-    // EQ2 : Y = A * X + B
-    // A = (cy2-cy1)/(cx2-cx1)
-    // B = cy1-(cy2-cy1)/(cx2-cx1)*cx1
-    // => R^2 = (X-cx)^2 + (A*X+B-cy)^2
-    // => R^2 = X^2 - 2*cx*X + cx^2 + A^2*X^2 + 2*A*(B-cy)*X + (B-cy)^2
-    // => (1+A^2) * X^2 + 2*(A*(B-cy)-cx) * X + cx^2 + (B-cy)^2 - R^2 = 0
+  getContactPoint(pX1, pY1, pX2, pY2, pR, bX1, bY1, bX2, bY2, bR, dir) {
+    // Input data :
+    // Player start center point = pX1,pY1
+    // Player end center point = pX2,pY2
+    // Player radius = pR
+    // Ball start center point = bX1,bY1
+    // Ball end center point = bX2,bY2
+    // Ball radius = bR
+    // Ball direction = dir
 
-    const a = 1 + Math.pow(A, 2);
-    const b = 2 * (A * (B - cy) - cx);
-    const c = Math.pow(cx, 2) + Math.pow(B - cy, 2) - Math.pow(R, 2);
+    // Unknowns :
+    // Ball contact center point = bX,bY
+    // Player contact center point = pX,pY
+
+    // Variables :
+    const R = bR + pR;
+    const A = (bY2 - bY1) / (bX2 - bX1);
+    const B = bY1 - (bY2 - bY1) / (bX2 - bX1) * bX1;
+
+    // Equations :
+    // EQ1 : R^2 = (bX - pX)^2 + (bY - pY)^2
+    // EQ2 : bY = A * bX + B
+    // EQ3 : pX = pX1 = pX2
+    // EQ4 : (pY2 - pY1) * n = pY2 - pY
+    // EQ5 : (bX2 - bX1) * n = bX2 - bX
+    // EQ5 : (bY2 - bY1) * n = bY2 - bY
+
+    // X :
+    // R^2 = (bX - pX1)^2 + (A * bX + B + (pY2 - pY1) * (bX2 - bX) / (bX2 - bX1) - pY2)^2
+    // R^2 = (bX - pX1)^2 + (C * bX + D)^2
+
+    // Variables :
+    const C = A - (pY2 - pY1) / (bX2 - bX1);
+    const D = B + (pY2 - pY1) / (bX2 - bX1) * bX2 - pY2
+
+    // X :
+    // R^2 = bX^2 - 2 * pX1 * bX + pX1^2 + C^2 * bX^2 + 2 * C * D * bX + D^2
+    // (1 + C^2) * bX^2 + 2 * (C * D - pX1) * bX + pX1^2 + D^2 - R^2 = 0
+
+    // Variables :
+    const a = 1 + Math.pow(C, 2);
+    const b = 2 * (C * D - pX1);
+    const c = Math.pow(pX1, 2) + Math.pow(D, 2) - Math.pow(R, 2);
     const delta = Math.pow(b, 2) - 4 * a * c;
 
-    let X;
+    let bX;
     if (dir > 0) {
-      X = (- b - Math.sqrt(delta)) / 2 / a;
+      bX = (- b - Math.sqrt(delta)) / 2 / a;
     } else {
-      X = (- b + Math.sqrt(delta)) / 2 / a;
+      bX = (- b + Math.sqrt(delta)) / 2 / a;
     }
 
     return {
-      X,
-      Y: A * X + B
+      bX,
+      bY: A * bX + B,
+      pX: pX1,
+      pY: pY2 - (pY2 - pY1) * (bX2 - bX) / (bX2 - bX1)
     };
   }
 
@@ -276,50 +328,47 @@ export class Game extends PureComponent {
     requestAnimationFrame(this.step);
   }
 
-  managePlayerCollision(state, newState, cx, cy, radius, playerY, playerHeight) {
+  managePlayerCollision(state, newState, pX1, pY1, pY2, radius, playerY, playerHeight, stopOnContact) {
     const { ballWidth } = this.props;
     const { ballX: x1, ballY: y1 } = state;
     const { ballX: x2, ballY: y2 } = newState;
 
     const ballRadius = ballWidth / 2 * this.windowHeight / 100;
 
-    const cx1 = x1 + ballRadius;
-    const cy1 = y1 + ballRadius;
-    const dx1 = cx1 - cx;
-    const dy1 = cy1 - cy;
+    const bX1 = x1 + ballRadius;
+    const bY1 = y1 + ballRadius;
+    const dx1 = bX1 - pX1;
+    const dy1 = bY1 - pY1;
     const d1 = Math.sqrt(Math.pow(dx1, 2) + Math.pow(dy1, 2));
 
-    const cx2 = x2 + ballRadius;
-    const cy2 = y2 + ballRadius;
-    const dx2 = cx2 - cx;
-    const dy2 = cy2 - cy;
+    const bX2 = x2 + ballRadius;
+    const bY2 = y2 + ballRadius;
+    const dx2 = bX2 - pX1;
+    const dy2 = bY2 - pY2;
     const d2 = Math.sqrt(Math.pow(dx2, 2) + Math.pow(dy2, 2));
 
     // Check if collision.
     if (d1 - ballRadius - radius > 0 && d2 - ballRadius - radius <= 0) {
-      // Calculate coordinates of contact point.
-      const A = (cy2 - cy1) / (cx2 - cx1);
-      const B = cy1 - (cy2 - cy1) / (cx2 - cx1) * cx1;
-      const R = ballRadius + radius;
-      const { X, Y } = this.getContactPoint(A, B, R, cx, cy, cx1 < cx2);
+      const { bX, bY, pX, pY } = this.getContactPoint(pX1, pY1, pX1, pY2, radius, bX1, bY1, bX2, bY2, ballRadius, bX1 < bX2);
 
       // Continue if contact point is inside the player arc.
-      if (Y >= playerY - ballRadius && Y <= playerY + playerHeight + ballRadius) {
+      if (bY >= playerY - ballRadius && bY <= playerY + playerHeight + ballRadius) {
         // Calculate new ball angle.
-        const alpha = Math.atan((Y - cy) / (X - cx));
-        const beta = Math.atan((Y - cy2) / (X - cx2));
-        const gamma = beta - alpha;
-        const ballAngle = state.ballAngle + Math.PI - 2 * gamma;
+        const contactAngle = Math.atan((bY - pY) / (bX - pX));
+        const incidenceAngle = state.ballAngle - contactAngle;
+        const newBallAngle = state.ballAngle + Math.PI - 2 * incidenceAngle;
 
         // Calculate rebound distance.
-        const fullDistance = Math.sqrt(Math.pow(cx2 - cx1, 2) + Math.pow(cy2 - cy1, 2));
-        const contactDistance = Math.sqrt(Math.pow(cx2 - X, 2) + Math.pow(cy2 - Y, 2));
+        const fullDistance = Math.sqrt(Math.pow(bX2 - bX1, 2) + Math.pow(bY2 - bY1, 2));
+        const contactDistance = Math.sqrt(Math.pow(bX2 - bX, 2) + Math.pow(bY2 - bY, 2));
         const reboundDistance = fullDistance - contactDistance;
 
         // Set state.
-        newState.ballAngle = ballAngle;
-        newState.ballX = X + Math.cos(ballAngle) * reboundDistance - ballRadius;
-        newState.ballY = Y + Math.sin(ballAngle) * reboundDistance - ballRadius;
+        newState.ballAngle = newBallAngle;
+        newState.ballX = bX + Math.cos(newBallAngle) * reboundDistance - ballRadius;
+        newState.ballY = bY + Math.sin(newBallAngle) * reboundDistance - ballRadius;
+
+        stopOnContact && (newState.contact = 1);
       }
     }
   }
@@ -339,39 +388,15 @@ export class Game extends PureComponent {
       width: '100vw',
       height: '100vh',
     };
-    const player1Style = {
-      position: 'absolute',
-      top: `${player1Y}vh`,
-      left: `${playerOffset}vw`,
-      width: `${playerWidth}vh`,
-      height: `${player1Height}vh`,
-    };
-    const player2Style = {
-      position: 'absolute',
-      top: `${player2Y}vh`,
-      right: `${playerOffset}vw`,
-      width: `${playerWidth}vh`,
-      height: `${player2Height}vh`,
-    };
-    const ballStyle = {
-      backgroundColor: 'white',
-      position: 'absolute',
-      top: ballY,
-      left: ballX,
-      width: `${ballWidth}vh`,
-      height: `${ballWidth}vh`,
-      borderRadius: '50%',
-    };
 
     return (
       <div style={gameStyle}>
-        <svg style={player1Style} viewBox={`0 0 ${playerWidth} ${player1Height}`}>
-          <path d={`M 0,0 A ${this.r1 * 100 / this.windowHeight},${this.r1 * 100 / this.windowHeight} 0 0,1 0,${player1Height} z`} fill="white" />
-        </svg>
-        <svg style={player2Style} viewBox={`0 0 ${playerWidth} ${player1Height}`}>
-          <path d={`M ${playerWidth},0 A ${this.r2 * 100 / this.windowHeight},${this.r2 * 100 / this.windowHeight} 1 0,0 ${playerWidth},${player1Height} z`} fill="white" />
-        </svg>
-        <div style={ballStyle}/>
+        <Player color="white" playerHeight={player1Height} playerOffset={playerOffset} playerWidth={playerWidth} playerY={player1Y} position={PLAYER_LEFT} radius={this.r1} windowHeight={this.windowHeight} />
+        <Player color="white" playerHeight={player2Height} playerOffset={playerOffset} playerWidth={playerWidth} playerY={player2Y} position={PLAYER_RIGHT} radius={this.r2} windowHeight={this.windowHeight} />
+        {this.state.oldOldOldState && (<Ball ballWidth={ballWidth} ballY={this.state.oldOldOldState.ballY} ballX={this.state.oldOldOldState.ballX} color="white" opacity="0.2" />)}
+        {this.state.oldOldState && (<Ball ballWidth={ballWidth} ballY={this.state.oldOldState.ballY} ballX={this.state.oldOldState.ballX} color="white" opacity="0.4" />)}
+        {this.state.oldState && (<Ball ballWidth={ballWidth} ballY={this.state.oldState.ballY} ballX={this.state.oldState.ballX} color="white" opacity="0.6" />)}
+        <Ball ballWidth={ballWidth} ballY={ballY} ballX={ballX} color="white" />
       </div>
     );
   }

@@ -1,10 +1,10 @@
-import React, { Component } from 'react';
+import React, { PureComponent } from 'react';
 
 import { Manager } from '../Manager/Manager';
 import { Menu } from '../Menu/Menu';
 import { Settings } from '../Settings/Settings';
 
-export class App extends Component {
+export class App extends PureComponent {
 
   state = {
     menuIsOpen: false,
