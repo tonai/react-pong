@@ -148,11 +148,12 @@ export class Game extends PureComponent {
     this.state.ballSpeed = props.ballSpeed;
     this.state.player1Y = 50 - props.player1Height / 2;
     // this.state.player2Y = 50 - props.player2Height / 2;
-    this.state.player2Y = 51.6793;
+    // this.state.player2Y = 51.6793;
+    this.state.player2Y = 50.67;
   }
 
   checkCollision(state, newState, delta) {
-    const { player1Height, player2Height, playerWidth, playerOffset } = this.props;
+    const { player1Height, player2Height } = this.props;
     const { ballAngle, ballSpeed, ballX, ballY, player1Y, player2Y } = state;
 
     newState.ballAngle = ballAngle;
@@ -163,30 +164,34 @@ export class Game extends PureComponent {
 
     // Collision with top or bottom sides.
     collisions[0] = this.getWindowCollision(state, newState, 0);
-    collisions[1] = this.getWindowCollision (state, newState, this.windowHeight);
+    collisions[1] = this.getWindowCollision(state, newState, this.windowHeight);
 
     // Collision with player1.
     collisions[2] = this.getPlayerCollision(
       state,
       newState,
-      playerOffset * this.windowWidth / 100 + playerWidth * this.windowHeight / 100 - this.r1,
-      player1Y * this.windowHeight / 100 + player1Height * this.windowHeight / 100 / 2,
-      newState.player1Y * this.windowHeight / 100 + player1Height * this.windowHeight / 100 / 2,
+      // playerOffset * this.windowWidth / 100 + playerWidth * this.windowHeight / 100 - this.r1,
+      // player1Y * this.windowHeight / 100 + player1Height * this.windowHeight / 100 / 2,
+      // newState.player1Y * this.windowHeight / 100 + player1Height * this.windowHeight / 100 / 2,
       this.r1,
       player1Y * this.windowHeight / 100,
-      player1Height * this.windowHeight / 100
+      newState.player1Y * this.windowHeight / 100,
+      player1Height * this.windowHeight / 100,
+      true
     );
 
     // Collision with player2.
     collisions[3] = this.getPlayerCollision(
       state,
       newState,
-      this.windowWidth - playerOffset * this.windowWidth / 100 - playerWidth * this.windowHeight / 100 + this.r2,
-      player2Y * this.windowHeight / 100 + player2Height * this.windowHeight / 100 / 2,
-      newState.player2Y * this.windowHeight / 100 + player2Height * this.windowHeight / 100 / 2,
+      // this.windowWidth - playerOffset * this.windowWidth / 100 - playerWidth * this.windowHeight / 100 + this.r2,
+      // player2Y * this.windowHeight / 100 + player2Height * this.windowHeight / 100 / 2,
+      // newState.player2Y * this.windowHeight / 100 + player2Height * this.windowHeight / 100 / 2,
       this.r2,
       player2Y * this.windowHeight / 100,
-      player2Height * this.windowHeight / 100
+      newState.player2Y * this.windowHeight / 100,
+      player2Height * this.windowHeight / 100,
+      false
     );
 
     const hasCollision = collisions.some(collision => collision.n !== Infinity);
@@ -200,7 +205,7 @@ export class Game extends PureComponent {
       state.ballAngle = ballAngle;
       state.ballX = ballX;
       state.ballY = ballY;
-      this.checkCollision(state, newState, delta * (1 - n))
+      this.checkCollision(state, newState, delta * (1 - n), true)
     }
   }
 
@@ -279,7 +284,7 @@ export class Game extends PureComponent {
     return newState;
   }
 
-  getContactPointWithCircle(pX1, pY1, pX2, pY2, pR, bX1, bY1, bX2, bY2, bR, leftToRight) {
+  getContactPointWithCircle(pX1, pY1, pX2, pY2, pR, bX1, bY1, bX2, bY2, bR) {
     // Input data :
     // Player start center point = pX1,pY1
     // Player end center point = pX2,pY2
@@ -324,18 +329,43 @@ export class Game extends PureComponent {
     const c = Math.pow(pX1, 2) + Math.pow(D, 2) - Math.pow(R, 2);
     const delta = Math.pow(b, 2) - 4 * a * c;
 
-    let bX;
-    if (leftToRight > 0) {
-      bX = (- b - Math.sqrt(delta)) / 2 / a;
-    } else {
-      bX = (- b + Math.sqrt(delta)) / 2 / a;
-    }
-    const bY = A * bX + B;
-    const n = (bX2 - bX) / (bX2 - bX1);
-    const pX = pX1;
-    const pY = pY2 - (pY2 - pY1) * n;
+    if (delta > 0) {
+      /*
+      let bX;
+      if (leftToRight > 0) {
+        bX = (- b - Math.sqrt(delta)) / 2 / a;
+      } else {
+        bX = (- b + Math.sqrt(delta)) / 2 / a;
+      }
+      const bY = A * bX + B;
+      const n = (bX2 - bX) / (bX2 - bX1);
+      const pX = pX1;
+      const pY = pY2 - (pY2 - pY1) * n;
+      
+      if (n >= 0 && n <= 1) {
+        return { bX, bY, n: 1 - n, pX, pY };
+      }
+      */
+      const bXSol1 = (- b - Math.sqrt(delta)) / 2 / a;
+      const bXSol2 = (- b + Math.sqrt(delta)) / 2 / a;
 
-    return { bX, bY, n: 1 - n, pX, pY };
+      const nSol1 = (bX2 - bXSol1) / (bX2 - bX1);
+      const nSol2 = (bX2 - bXSol2) / (bX2 - bX1);
+
+      const isSol1Valid = nSol1 >= 0 && nSol1 < 0.999;
+      const isSol2Valid = nSol2 >= 0 && nSol2 < 0.999;
+      const n = isSol1Valid
+        ? (isSol2Valid ? Math.max(nSol1, nSol2) : nSol1)
+        : (isSol2Valid ? nSol2 : -Infinity);
+
+      const bX = bX2 - (bX2 - bX1) * n;
+      const bY = A * bX + B;
+      const pX = pX1;
+      const pY = pY2 - (pY2 - pY1) * n;
+      return { bX, bY, n: 1 - n, pX, pY };
+    }
+
+    return { n: Infinity };
   }
 
   getContactPointWithHLine(y, bX1, bY1, bX2, bY2, bR, bottomToTop) {
@@ -363,46 +393,161 @@ export class Game extends PureComponent {
     const bX = (bY - B) / A;
     const n = (bX2 - bX) / (bX2 - bX1);
 
-    return { bX, bY, n };
+    return { bX, bY, n: 1 - n };
   }
 
-  getPlayerCollision(state, newState, pX1, pY1, pY2, radius, playerY, playerHeight) {
-    const { ballWidth } = this.props;
+  getContactPointWithPoint(pX1, pY1, pX2, pY2, bX1, bY1, bX2, bY2, bR) {
+    // Input data :
+    // Point start point = pX1,pY1
+    // Point end point = pX2,pY2
+    // Ball start center point = bX1,bY1
+    // Ball end center point = bX2,bY2
+    // Ball radius = bR
+
+    // Unknowns :
+    // Ball contact center point = bX,bY
+    // Point contact point = pX,pY
+
+    // Variables :
+    const R = bR;
+    const A = (bY2 - bY1) / (bX2 - bX1);
+    const B = bY1 - (bY2 - bY1) / (bX2 - bX1) * bX1;
+
+    // Equations :
+    // EQ1 : R^2 = (bX - pX)^2 + (bY - pY)^2
+    // EQ2 : bY = A * bX + B
+    // EQ3 : pX = pX1 = pX2
+    // EQ4 : (pY2 - pY1) * n = pY2 - pY
+    // EQ5 : (bX2 - bX1) * n = bX2 - bX
+    // EQ5 : (bY2 - bY1) * n = bY2 - bY
+
+    // bX :
+    // R^2 = (bX - pX1)^2 + (A * bX + B + (pY2 - pY1) * (bX2 - bX) / (bX2 - bX1) - pY2)^2
+    // R^2 = (bX - pX1)^2 + (C * bX + D)^2
+
+    // Variables :
+    const C = A - (pY2 - pY1) / (bX2 - bX1);
+    const D = B + (pY2 - pY1) / (bX2 - bX1) * bX2 - pY2
+
+    // bX :
+    // R^2 = bX^2 - 2 * pX1 * bX + pX1^2 + C^2 * bX^2 + 2 * C * D * bX + D^2
+    // (1 + C^2) * bX^2 + 2 * (C * D - pX1) * bX + pX1^2 + D^2 - R^2 = 0
+
+    // Variables :
+    const a = 1 + Math.pow(C, 2);
+    const b = 2 * (C * D - pX1);
+    const c = Math.pow(pX1, 2) + Math.pow(D, 2) - Math.pow(R, 2);
+    const delta = Math.pow(b, 2) - 4 * a * c;
+
+    if (delta > 0) {
+      const bXSol1 = (- b - Math.sqrt(delta)) / 2 / a;
+      const bXSol2 = (- b + Math.sqrt(delta)) / 2 / a;
+
+      const nSol1 = (bX2 - bXSol1) / (bX2 - bX1);
+      const nSol2 = (bX2 - bXSol2) / (bX2 - bX1);
+
+      const isSol1Valid = nSol1 >= 0 && nSol1 < 0.999;
+      const isSol2Valid = nSol2 >= 0 && nSol2 < 0.999;
+      const n = isSol1Valid
+        ? (isSol2Valid ? Math.max(nSol1, nSol2) : nSol1)
+        : (isSol2Valid ? nSol2 : -Infinity);
+
+      const bX = bX2 - (bX2 - bX1) * n;
+      const bY = A * bX + B;
+      const pX = pX1;
+      const pY = pY2 - (pY2 - pY1) * n;
+      return { bX, bY, n: 1 - n, pX, pY };
+    }
+
+    return { n: Infinity };
+  }
+
+  getPlayerCollision(state, newState, /*pX1, pY1, pY2,*/ radius, tEY1, tEY2, playerHeight, left, stop) {
+    let { ballWidth, playerWidth, playerOffset } = this.props;
     const { ballX: x1, ballY: y1 } = state;
     const { ballX: x2, ballY: y2 } = newState;
 
     const ballRadius = ballWidth / 2 * this.windowHeight / 100;
+    playerWidth = playerWidth * this.windowHeight / 100;
+    playerOffset = playerOffset * this.windowWidth / 100;
 
+    // Player center.
+    const pX1 = left
+      ? playerOffset + playerWidth - radius
+      : this.windowWidth - playerOffset - playerWidth + radius;
+    const pY1 = tEY1 + playerHeight / 2;
+    const pY2 = tEY2 + playerHeight / 2
+
+    // Ball center.
     const bX1 = x1 + ballRadius;
     const bY1 = y1 + ballRadius;
-    const dx1 = bX1 - pX1;
-    const dy1 = bY1 - pY1;
-    const d1 = Math.sqrt(Math.pow(dx1, 2) + Math.pow(dy1, 2));
-
     const bX2 = x2 + ballRadius;
     const bY2 = y2 + ballRadius;
-    const dx2 = bX2 - pX1;
-    const dy2 = bY2 - pY2;
-    const d2 = Math.sqrt(Math.pow(dx2, 2) + Math.pow(dy2, 2));
 
-    // Check if collision.
-    if (d1 - ballRadius - radius > 0 && d2 - ballRadius - radius <= 0) {
-      const { bX, bY, n, pX, pY } = this.getContactPointWithCircle(pX1, pY1, pX1, pY2, radius, bX1, bY1, bX2, bY2, ballRadius, (bX2 - bX1) / Math.abs(bX2 - bX1));
+    const cPWC = this.getContactPointWithCircle(pX1, pY1, pX1, pY2, radius, bX1, bY1, bX2, bY2, ballRadius);
+    // Continue if contact point is inside the player arc.
+    if (cPWC.n !== Infinity && cPWC.bY + ballRadius >= cPWC.pY - playerHeight / 2 && cPWC.bY - ballRadius <= cPWC.pY + playerHeight / 2) {
+      const { bX, bY, n, pX, pY } = cPWC;
 
-      // Continue if contact point is inside the player arc.
-      if (bY >= playerY - ballRadius && bY <= playerY + playerHeight + ballRadius) {
-        // Calculate new ball angle.
-        const contactAngle = Math.atan((bY - pY) / (bX - pX));
-        const incidenceAngle = state.ballAngle - contactAngle;
-        const newBallAngle = state.ballAngle + Math.PI - 2 * incidenceAngle;
+      // Calculate new ball angle.
+      const contactAngle = Math.atan((bY - pY) / (bX - pX));
+      const incidenceAngle = state.ballAngle - contactAngle;
+      const newBallAngle = state.ballAngle + Math.PI - 2 * incidenceAngle;
 
-        // Set state.
-        return {
-          ballAngle: newBallAngle,
-          ballX: bX - ballRadius,
-          ballY: bY - ballRadius,
-          n
-        }
+      stop && (newState.contact = 1);
+      // Set state.
+      return {
+        ballAngle: newBallAngle,
+        ballX: bX - ballRadius,
+        ballY: bY - ballRadius,
+        n
+      }
+    }
+
+    // Top extremity.
+    const eX1 = left ? playerOffset : this.windowWidth - playerOffset;
+
+    const cPWPT = this.getContactPointWithPoint(eX1, tEY1, eX1, tEY2, bX1, bY1, bX2, bY2, ballRadius);
+    // Check if collision with top extremity.
+    if (cPWPT.n !== Infinity) {
+      const { bX, bY, n } = cPWPT;
+
+      // Calculate new ball angle.
+      const contactAngle = Math.asin((playerWidth / 2) / radius) / 2;
+      const incidenceAngle = Math.PI / 2 - state.ballAngle + contactAngle;
+      const newBallAngle = state.ballAngle + Math.PI + 2 * incidenceAngle;
+
+      stop && (newState.contact = 1);
+      // Set state.
+      return {
+        ballAngle: newBallAngle,
+        ballX: bX - ballRadius,
+        ballY: bY - ballRadius,
+        n
+      }
+    }
+
+    // Bottom extremity.
+    const bEY1 = tEY1 + playerHeight;
+    const bEY2 = tEY2 + playerHeight;
+
+    const cPWPB = this.getContactPointWithPoint(eX1, bEY1, eX1, bEY2, bX1, bY1, bX2, bY2, ballRadius);
+    // Check if collision with top extremity.
+    if (cPWPB.n !== Infinity) {
+      const { bX, bY, n } = cPWPB ;
+
+      // Calculate new ball angle.
+      const contactAngle = Math.asin((playerWidth / 2) / radius) / 2;
+      const incidenceAngle = Math.PI / 2 - state.ballAngle + contactAngle;
+      const newBallAngle = state.ballAngle + Math.PI + 2 * incidenceAngle;
+
+      stop && (newState.contact = 1);
+      // Set state.
+      return {
+        ballAngle: newBallAngle,
+        ballX: bX - ballRadius,
+        ballY: bY - ballRadius,
+        n
       }
     }
 
@@ -423,7 +568,6 @@ export class Game extends PureComponent {
     const { bX, bY, n } = this.getContactPointWithHLine(y, bX1, bY1, bX2, bY2, ballRadius, (bY2 - bY1) / Math.abs(bY2 - bY1));
 
     if (n > 0 && n < 1) {
-      // newState.contact = 1;
       return {
         ballAngle: - state.ballAngle,
         ballX: bX - ballRadius,
