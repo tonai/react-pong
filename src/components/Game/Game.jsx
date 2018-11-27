@@ -8,18 +8,19 @@ const END_TIMEOUT = 500;
 export class Game extends PureComponent {
 
   static defaultProps = {
+    ballAcceleration: 0.01,
+    ballOffset: 1,
+    ballSpeed: 0.5,
+    ballWidth: 2,
+    gameKey: '0-0',
     pause: false,
-    playerWidth: 2,
-    playerOffset: 5,
     player1Height: 10,
     player1Speed: 0.1,
     player2Height: 10,
     player2Speed: 0.1,
-    ballWidth: 2,
-    ballSpeed: 0.5,
-    ballAcceleration: 0.01,
+    playerOffset: 5,
+    playerWidth: 2,
     startPlayer: 'player1',
-    gameKey: '0-0',
   };
 
   state = {
@@ -147,9 +148,7 @@ export class Game extends PureComponent {
     this.resize();
     this.state.ballSpeed = props.ballSpeed;
     this.state.player1Y = 50 - props.player1Height / 2;
-    // this.state.player2Y = 50 - props.player2Height / 2;
-    // this.state.player2Y = 51.6793;
-    this.state.player2Y = 50.67;
+    this.state.player2Y = 50 - props.player2Height / 2;
   }
 
   checkCollision(state, newState, delta) {
@@ -170,9 +169,6 @@ export class Game extends PureComponent {
     collisions[2] = this.getPlayerCollision(
       state,
       newState,
-      // playerOffset * this.windowWidth / 100 + playerWidth * this.windowHeight / 100 - this.r1,
-      // player1Y * this.windowHeight / 100 + player1Height * this.windowHeight / 100 / 2,
-      // newState.player1Y * this.windowHeight / 100 + player1Height * this.windowHeight / 100 / 2,
       this.r1,
       player1Y * this.windowHeight / 100,
       newState.player1Y * this.windowHeight / 100,
@@ -184,9 +180,6 @@ export class Game extends PureComponent {
     collisions[3] = this.getPlayerCollision(
       state,
       newState,
-      // this.windowWidth - playerOffset * this.windowWidth / 100 - playerWidth * this.windowHeight / 100 + this.r2,
-      // player2Y * this.windowHeight / 100 + player2Height * this.windowHeight / 100 / 2,
-      // newState.player2Y * this.windowHeight / 100 + player2Height * this.windowHeight / 100 / 2,
       this.r2,
       player2Y * this.windowHeight / 100,
       newState.player2Y * this.windowHeight / 100,
@@ -226,7 +219,7 @@ export class Game extends PureComponent {
   }
 
   getState(delta, state) {
-    const { ballAcceleration, ballWidth, player1Height, player1Speed, player2Height, player2Speed, playerWidth, playerOffset } = this.props;
+    const { ballAcceleration, ballOffset, ballWidth, player1Height, player1Speed, player2Height, player2Speed, playerWidth, playerOffset } = this.props;
     const { ballSpeed, player1Y, player2Y } = state;
     const newState = {};
 
@@ -266,11 +259,11 @@ export class Game extends PureComponent {
       }
     } else if (this.stage === 'init') {
       if (this.props.startPlayer === 'player1') {
-        newState.ballX = playerOffset * this.windowWidth / 100 + playerWidth * this.windowHeight / 100;
+        newState.ballX = playerOffset * this.windowWidth / 100 + (playerWidth + ballOffset) * this.windowHeight / 100;
         newState.ballY = (newState.player1Y + player1Height / 2 - ballWidth / 2) * this.windowHeight / 100;
         newState.ballAngle = Math.PI / 6;
       } else {
-        newState.ballX = this.windowWidth - playerOffset * this.windowWidth / 100 - playerWidth * this.windowHeight / 100 - ballWidth * this.windowHeight / 100;
+        newState.ballX = this.windowWidth - playerOffset * this.windowWidth / 100 - (playerWidth + ballOffset) * this.windowHeight / 100 - ballWidth * this.windowHeight / 100;
         newState.ballY = (newState.player2Y + player2Height / 2 - ballWidth / 2) * this.windowHeight / 100;
         newState.ballAngle = 5 * Math.PI / 6;
       }
@@ -352,12 +345,13 @@ export class Game extends PureComponent {
       const nSol1 = (bX2 - bXSol1) / (bX2 - bX1);
       const nSol2 = (bX2 - bXSol2) / (bX2 - bX1);
 
-      const isSol1Valid = nSol1 >= 0 && nSol1 < 0.999;
-      const isSol2Valid = nSol2 >= 0 && nSol2 < 0.999;
+      const isSol1Valid = nSol1 >= 0 && nSol1 < 1;
+      const isSol2Valid = nSol2 >= 0 && nSol2 < 1;
       const n = isSol1Valid
         ? (isSol2Valid ? Math.max(nSol1, nSol2) : nSol1)
         : (isSol2Valid ? nSol2 : -Infinity);
 
+      console.log(n);
       const bX = bX2 - (bX2 - bX1) * n;
       const bY = A * bX + B;
       const pX = pX1;
@@ -446,8 +440,8 @@ export class Game extends PureComponent {
       const nSol1 = (bX2 - bXSol1) / (bX2 - bX1);
       const nSol2 = (bX2 - bXSol2) / (bX2 - bX1);
 
-      const isSol1Valid = nSol1 >= 0 && nSol1 < 0.999;
-      const isSol2Valid = nSol2 >= 0 && nSol2 < 0.999;
+      const isSol1Valid = nSol1 >= 0 && nSol1 < 1;
+      const isSol2Valid = nSol2 >= 0 && nSol2 < 1;
       const n = isSol1Valid
         ? (isSol2Valid ? Math.max(nSol1, nSol2) : nSol1)
         : (isSol2Valid ? nSol2 : -Infinity);
