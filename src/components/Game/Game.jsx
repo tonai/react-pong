@@ -29,8 +29,7 @@ export class Game extends PureComponent {
     ballX: 0,
     ballY: 0,
     ballSpeed: 0,
-    ballAngle: 0,
-    contact: 0
+    ballAngle: 0
   };
 
   player1Up = false;
@@ -136,7 +135,7 @@ export class Game extends PureComponent {
     }
 
     this.time = time;
-    if (this.stage !== 'end' && !pause && this.state.contact < 1) {
+    if (this.stage !== 'end' && !pause) {
       requestAnimationFrame(this.step);
     } else {
       this.time = null;
@@ -223,10 +222,6 @@ export class Game extends PureComponent {
     const { ballSpeed, player1Y, player2Y } = state;
     const newState = {};
 
-    if (state.contact) {
-      newState.contact = state.contact + 1;
-    }
-
     if (this.player1Down && !this.player1Up) {
       newState.player1Y = Math.min(player1Y + delta * player1Speed, 100 - player1Height);
     } else if (!this.player1Down && this.player1Up) {
@@ -277,7 +272,7 @@ export class Game extends PureComponent {
     return newState;
   }
 
-  getContactPointWithCircle(pX1, pY1, pX2, pY2, pR, bX1, bY1, bX2, bY2, bR) {
+  getContactPointWithCircle(pX1, pY1, pX2, pY2, pR, bX1, bY1, bX2, bY2, bR, bA) {
     // Input data :
     // Player start center point = pX1,pY1
     // Player end center point = pX2,pY2
@@ -285,7 +280,7 @@ export class Game extends PureComponent {
     // Ball start center point = bX1,bY1
     // Ball end center point = bX2,bY2
     // Ball radius = bR
-    // Ball direction = leftToRight
+    // Ball angle = bA
 
     // Unknowns :
     // Ball contact center point = bX,bY
@@ -310,52 +305,61 @@ export class Game extends PureComponent {
 
     // Variables :
     const C = A - (pY2 - pY1) / (bX2 - bX1);
-    const D = B + (pY2 - pY1) / (bX2 - bX1) * bX2 - pY2
+    const D = B + (pY2 - pY1) / (bX2 - bX1) * bX2 - pY2;
 
     // bX :
     // R^2 = bX^2 - 2 * pX1 * bX + pX1^2 + C^2 * bX^2 + 2 * C * D * bX + D^2
     // (1 + C^2) * bX^2 + 2 * (C * D - pX1) * bX + pX1^2 + D^2 - R^2 = 0
+    let { delta, sol1: bXSol1, sol2: bXSol2 } = this.solvePolynomial(
+      1 + Math.pow(C, 2),
+      2 * (C * D - pX1),
+      Math.pow(pX1, 2) + Math.pow(D, 2) - Math.pow(R, 2)
+    );
 
-    // Variables :
-    const a = 1 + Math.pow(C, 2);
-    const b = 2 * (C * D - pX1);
-    const c = Math.pow(pX1, 2) + Math.pow(D, 2) - Math.pow(R, 2);
-    const delta = Math.pow(b, 2) - 4 * a * c;
+    if (delta <= 0) {
+      // No solutions.
+      return { n: Infinity };
+    }
 
-    if (delta > 0) {
-      /*
-      let bX;
-      if (leftToRight > 0) {
-        bX = (- b - Math.sqrt(delta)) / 2 / a;
-      } else {
-        bX = (- b + Math.sqrt(delta)) / 2 / a;
-      }
-      const bY = A * bX + B;
-      const n = (bX2 - bX) / (bX2 - bX1);
-      const pX = pX1;
-      const pY = pY2 - (pY2 - pY1) * n;
-      
-      if (n >= 0 && n <= 1) {
-        return { bX, bY, n: 1 - n, pX, pY };
-      }
-      */
-      const bXSol1 = (- b - Math.sqrt(delta)) / 2 / a;
-      const bXSol2 = (- b + Math.sqrt(delta)) / 2 / a;
+    let bYSol1 = A * bXSol1 + B;
+    let bYSol2 = A * bXSol2 + B;
+    const nSol1 = (bX2 - bXSol1) / (bX2 - bX1);
+    const nSol2 = (bX2 - bXSol2) / (bX2 - bX1);
 
-      const nSol1 = (bX2 - bXSol1) / (bX2 - bX1);
-      const nSol2 = (bX2 - bXSol2) / (bX2 - bX1);
+    const isSol1Valid = nSol1 >= 0 && nSol1 < 1;
+    const isSol2Valid = nSol2 >= 0 && nSol2 < 1;
 
-      const isSol1Valid = nSol1 >= 0 && nSol1 < 1;
-      const isSol2Valid = nSol2 >= 0 && nSol2 < 1;
-      const n = isSol1Valid
-        ? (isSol2Valid ? Math.max(nSol1, nSol2) : nSol1)
-        : (isSol2Valid ? nSol2 : -Infinity);
+    let n;
+    if (!isSol1Valid && !isSol2Valid) {
+      // Invalid solution.
+      return { n: Infinity };
+    } else if (isSol1Valid && isSol2Valid && nSol1 > nSol2) {
+      n = nSol1;
+    } else if (isSol1Valid && isSol2Valid) {
+      n = nSol2;
+    } else if (isSol1Valid) {
+      n = nSol1;
+    } else {
+      n = nSol2;
+    }
 
-      console.log(n);
-      const bX = bX2 - (bX2 - bX1) * n;
-      const bY = A * bX + B;
-      const pX = pX1;
-      const pY = pY2 - (pY2 - pY1) * n;
+    if (n === nSol2) {
+      [ bXSol1, bXSol2 ] = [ bXSol2, bXSol1 ];
+      [ bYSol1, bYSol2 ] = [ bYSol2, bYSol1 ];
+    }
+
+    // Solution variables.
+    const bX = bXSol1;
+    const bY = bYSol1;
+    const pX = pX1;
+    const pY = pY2 - (pY2 - pY1) * n;
+
+    // Check that the ball direction is from player external to player internal.
+    const dC2B1 = Math.sqrt(Math.pow((bXSol2 - bX1), 2) + Math.pow((bYSol2 - bY1), 2));
+    const dC2B2 = Math.sqrt(Math.pow((bXSol2 - bX2), 2) + Math.pow((bYSol2 - bY2), 2));
+    const dC1B2 = Math.sqrt(Math.pow((bXSol1 - bX2), 2) + Math.pow((bYSol1 - bY2), 2));
+
+    if (dC2B1 > dC2B2 || dC1B2 > dC2B2) {
       return { bX, bY, n: 1 - n, pX, pY };
     }
 
@@ -397,6 +401,7 @@ export class Game extends PureComponent {
     // Ball start center point = bX1,bY1
     // Ball end center point = bX2,bY2
     // Ball radius = bR
+    // Ball angle = bA
 
     // Unknowns :
     // Ball contact center point = bX,bY
@@ -421,35 +426,61 @@ export class Game extends PureComponent {
 
     // Variables :
     const C = A - (pY2 - pY1) / (bX2 - bX1);
-    const D = B + (pY2 - pY1) / (bX2 - bX1) * bX2 - pY2
+    const D = B + (pY2 - pY1) / (bX2 - bX1) * bX2 - pY2;
 
     // bX :
     // R^2 = bX^2 - 2 * pX1 * bX + pX1^2 + C^2 * bX^2 + 2 * C * D * bX + D^2
     // (1 + C^2) * bX^2 + 2 * (C * D - pX1) * bX + pX1^2 + D^2 - R^2 = 0
+    let { delta, sol1: bXSol1, sol2: bXSol2 } = this.solvePolynomial(
+      1 + Math.pow(C, 2),
+      2 * (C * D - pX1),
+      Math.pow(pX1, 2) + Math.pow(D, 2) - Math.pow(R, 2)
+    );
 
-    // Variables :
-    const a = 1 + Math.pow(C, 2);
-    const b = 2 * (C * D - pX1);
-    const c = Math.pow(pX1, 2) + Math.pow(D, 2) - Math.pow(R, 2);
-    const delta = Math.pow(b, 2) - 4 * a * c;
+    if (delta <= 0) {
+      // No solutions.
+      return { n: Infinity };
+    }
 
-    if (delta > 0) {
-      const bXSol1 = (- b - Math.sqrt(delta)) / 2 / a;
-      const bXSol2 = (- b + Math.sqrt(delta)) / 2 / a;
+    let bYSol1 = A * bXSol1 + B;
+    let bYSol2 = A * bXSol2 + B;
+    const nSol1 = (bX2 - bXSol1) / (bX2 - bX1);
+    const nSol2 = (bX2 - bXSol2) / (bX2 - bX1);
 
-      const nSol1 = (bX2 - bXSol1) / (bX2 - bX1);
-      const nSol2 = (bX2 - bXSol2) / (bX2 - bX1);
+    const isSol1Valid = nSol1 >= 0 && nSol1 < 1;
+    const isSol2Valid = nSol2 >= 0 && nSol2 < 1;
 
-      const isSol1Valid = nSol1 >= 0 && nSol1 < 1;
-      const isSol2Valid = nSol2 >= 0 && nSol2 < 1;
-      const n = isSol1Valid
-        ? (isSol2Valid ? Math.max(nSol1, nSol2) : nSol1)
-        : (isSol2Valid ? nSol2 : -Infinity);
+    let n;
+    if (!isSol1Valid && !isSol2Valid) {
+      // Invalid solution.
+      return { n: Infinity };
+    } else if (isSol1Valid && isSol2Valid && nSol1 > nSol2) {
+      n = nSol1;
+    } else if (isSol1Valid && isSol2Valid) {
+      n = nSol2;
+    } else if (isSol1Valid) {
+      n = nSol1;
+    } else {
+      n = nSol2;
+    }
 
-      const bX = bX2 - (bX2 - bX1) * n;
-      const bY = A * bX + B;
-      const pX = pX1;
-      const pY = pY2 - (pY2 - pY1) * n;
+    if (n === nSol2) {
+      [ bXSol1, bXSol2 ] = [ bXSol2, bXSol1 ];
+      [ bYSol1, bYSol2 ] = [ bYSol2, bYSol1 ];
+    }
+
+    // Solution variables.
+    const bX = bXSol1;
+    const bY = bYSol1;
+    const pX = pX1;
+    const pY = pY2 - (pY2 - pY1) * n;
+
+    // Check that the ball direction is from player external to player internal.
+    const dC2B1 = Math.sqrt(Math.pow((bXSol2 - bX1), 2) + Math.pow((bYSol2 - bY1), 2));
+    const dC2B2 = Math.sqrt(Math.pow((bXSol2 - bX2), 2) + Math.pow((bYSol2 - bY2), 2));
+    const dC1B2 = Math.sqrt(Math.pow((bXSol1 - bX2), 2) + Math.pow((bYSol1 - bY2), 2));
+
+    if (dC2B1 > dC2B2 || dC1B2 > dC2B2) {
       return { bX, bY, n: 1 - n, pX, pY };
     }
 
@@ -458,7 +489,7 @@ export class Game extends PureComponent {
 
   getPlayerCollision(state, newState, /*pX1, pY1, pY2,*/ radius, tEY1, tEY2, playerHeight, left, stop) {
     let { ballWidth, playerWidth, playerOffset } = this.props;
-    const { ballX: x1, ballY: y1 } = state;
+    const { ballAngle, ballX: x1, ballY: y1 } = state;
     const { ballX: x2, ballY: y2 } = newState;
 
     const ballRadius = ballWidth / 2 * this.windowHeight / 100;
@@ -470,7 +501,7 @@ export class Game extends PureComponent {
       ? playerOffset + playerWidth - radius
       : this.windowWidth - playerOffset - playerWidth + radius;
     const pY1 = tEY1 + playerHeight / 2;
-    const pY2 = tEY2 + playerHeight / 2
+    const pY2 = tEY2 + playerHeight / 2;
 
     // Ball center.
     const bX1 = x1 + ballRadius;
@@ -485,10 +516,9 @@ export class Game extends PureComponent {
 
       // Calculate new ball angle.
       const contactAngle = Math.atan((bY - pY) / (bX - pX));
-      const incidenceAngle = state.ballAngle - contactAngle;
-      const newBallAngle = state.ballAngle + Math.PI - 2 * incidenceAngle;
+      const incidenceAngle = ballAngle - contactAngle;
+      const newBallAngle = ballAngle + Math.PI - 2 * incidenceAngle;
 
-      stop && (newState.contact = 1);
       // Set state.
       return {
         ballAngle: newBallAngle,
@@ -508,10 +538,9 @@ export class Game extends PureComponent {
 
       // Calculate new ball angle.
       const contactAngle = Math.asin((playerWidth / 2) / radius) / 2;
-      const incidenceAngle = Math.PI / 2 - state.ballAngle + contactAngle;
-      const newBallAngle = state.ballAngle + Math.PI + 2 * incidenceAngle;
+      const incidenceAngle = Math.PI / 2 - ballAngle + contactAngle;
+      const newBallAngle = ballAngle + Math.PI + 2 * incidenceAngle;
 
-      stop && (newState.contact = 1);
       // Set state.
       return {
         ballAngle: newBallAngle,
@@ -532,8 +561,8 @@ export class Game extends PureComponent {
 
       // Calculate new ball angle.
       const contactAngle = Math.asin((playerWidth / 2) / radius) / 2;
-      const incidenceAngle = Math.PI / 2 - state.ballAngle + contactAngle;
-      const newBallAngle = state.ballAngle + Math.PI + 2 * incidenceAngle;
+      const incidenceAngle = Math.PI / 2 - ballAngle + contactAngle;
+      const newBallAngle = ballAngle + Math.PI + 2 * incidenceAngle;
 
       stop && (newState.contact = 1);
       // Set state.
@@ -582,6 +611,19 @@ export class Game extends PureComponent {
     const { onEnd } = this.props;
     this.stage = 'end';
     setTimeout(() => onEnd(winner), END_TIMEOUT);
+  }
+
+  solvePolynomial(a, b, c) {
+    const delta = Math.pow(b, 2) - 4 * a * c;
+
+    if (delta <= 0) {
+      return { delta };
+    }
+
+    const sol1 = (- b - Math.sqrt(delta)) / 2 / a;
+    const sol2 = (- b + Math.sqrt(delta)) / 2 / a;
+
+    return { delta, sol1, sol2 };
   }
 
   render() {
