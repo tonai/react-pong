@@ -2,6 +2,7 @@ import React, { PureComponent } from 'react';
 
 import { Ball } from '../Ball/Ball';
 import { Player, PLAYER_LEFT, PLAYER_RIGHT } from '../Player/Player';
+import { Oscillator } from '../Sounds/Oscillator/Oscillator';
 
 const END_TIMEOUT = 500;
 
@@ -24,12 +25,13 @@ export class Game extends PureComponent {
   };
 
   state = {
-    player1Y: 0,
-    player2Y: 0,
+    ballAngle: 0,
+    ballSpeed: 0,
     ballX: 0,
     ballY: 0,
-    ballSpeed: 0,
-    ballAngle: 0
+    player1Y: 0,
+    player2Y: 0,
+    sound: null
   };
 
   player1Up = false;
@@ -188,7 +190,7 @@ export class Game extends PureComponent {
 
     const hasCollision = collisions.some(collision => collision.n !== Infinity);
     if (hasCollision) {
-      const { ballAngle, ballX, ballY, n } = collisions.reduce((acc, collision) => {
+      const { ballAngle, ballX, ballY, n, sound } = collisions.reduce((acc, collision) => {
         if (collision.n < acc.n) {
           acc = collision;
         }
@@ -197,6 +199,10 @@ export class Game extends PureComponent {
       state.ballAngle = ballAngle;
       state.ballX = ballX;
       state.ballY = ballY;
+      newState.sound = {
+        ...sound,
+        key: state.sound ? state.sound.key + 1 : 0
+      };
       this.checkCollision(state, newState, delta * (1 - n), true)
     }
   }
@@ -272,7 +278,7 @@ export class Game extends PureComponent {
     return newState;
   }
 
-  getContactPointWithCircle(pX1, pY1, pX2, pY2, pR, bX1, bY1, bX2, bY2, bR, bA) {
+  getContactPointWithCircle(pX1, pY1, pX2, pY2, pR, bX1, bY1, bX2, bY2, bR) {
     // Input data :
     // Player start center point = pX1,pY1
     // Player end center point = pX2,pY2
@@ -524,7 +530,8 @@ export class Game extends PureComponent {
         ballAngle: newBallAngle,
         ballX: bX - ballRadius,
         ballY: bY - ballRadius,
-        n
+        n,
+        sound: { note: 'A5' }
       }
     }
 
@@ -546,7 +553,8 @@ export class Game extends PureComponent {
         ballAngle: newBallAngle,
         ballX: bX - ballRadius,
         ballY: bY - ballRadius,
-        n
+        n,
+        sound: { note: 'A5' }
       }
     }
 
@@ -570,7 +578,8 @@ export class Game extends PureComponent {
         ballAngle: newBallAngle,
         ballX: bX - ballRadius,
         ballY: bY - ballRadius,
-        n
+        n,
+        sound: { note: 'A5' }
       }
     }
 
@@ -595,7 +604,8 @@ export class Game extends PureComponent {
         ballAngle: - state.ballAngle,
         ballX: bX - ballRadius,
         ballY: bY - ballRadius,
-        n
+        n,
+        sound: {}
       };
     }
 
@@ -611,6 +621,12 @@ export class Game extends PureComponent {
     const { onEnd } = this.props;
     this.stage = 'end';
     setTimeout(() => onEnd(winner), END_TIMEOUT);
+    this.setState(state => ({
+      sound: {
+        note: 'A3',
+        key: state.sound ? state.sound.key + 1 : 0
+      }
+    }))
   }
 
   solvePolynomial(a, b, c) {
@@ -628,7 +644,7 @@ export class Game extends PureComponent {
 
   render() {
     const { ballWidth, playerOffset, playerWidth, player1Height, player2Height } = this.props;
-    const { ballX, ballY, player1Y, player2Y } = this.state;
+    const { ballX, ballY, player1Y, player2Y, sound } = this.state;
     const gameStyle = {
       background: 'black',
       overflow: 'hidden',
@@ -645,6 +661,7 @@ export class Game extends PureComponent {
         {this.state.oldOldState && (<Ball ballWidth={ballWidth} ballY={this.state.oldOldState.ballY} ballX={this.state.oldOldState.ballX} color="white" opacity="0.4" />)}
         {this.state.oldState && (<Ball ballWidth={ballWidth} ballY={this.state.oldState.ballY} ballX={this.state.oldState.ballX} color="white" opacity="0.6" />)}
         <Ball ballWidth={ballWidth} ballY={ballY} ballX={ballX} color="white" />
+        {sound && (<Oscillator {...sound}/>)}
       </div>
     );
   }
