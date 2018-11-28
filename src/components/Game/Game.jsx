@@ -1,9 +1,11 @@
 import React, { PureComponent } from 'react';
 
+import { PLAYER_LEFT, PLAYER_RIGHT } from '../../config/players';
+
 import { getContactPointWithCircle, getContactPointWithHLine, getContactPointWithPoint } from '../../services/collisionManager';
 
 import { Ball } from '../Ball/Ball';
-import { Player, PLAYER_LEFT, PLAYER_RIGHT } from '../Player/Player';
+import { Player } from '../Player/Player';
 import { Oscillator } from '../Sounds/Oscillator/Oscillator';
 
 const END_TIMEOUT = 500;
@@ -23,7 +25,7 @@ export class Game extends PureComponent {
     player2Speed: 0.1,
     playerOffset: 5,
     playerWidth: 2,
-    startPlayer: 'player1',
+    startPlayer: PLAYER_LEFT
   };
 
   state = {
@@ -41,6 +43,10 @@ export class Game extends PureComponent {
   player2Up = false;
   player2Down = false;
 
+  player1Touch = null;
+  player2Touch = null;
+  touches = {};
+
   r1 = 0;
   r2 = 0;
   windowWidth = 0;
@@ -51,10 +57,10 @@ export class Game extends PureComponent {
   time = null;
   stage = 'init';
 
-  keyDown = (e) => {
+  handleKeyDown = (event) => {
     const { settings, startPlayer } = this.props;
 
-    switch (e.code) {
+    switch (event.code) {
       case settings.player1Up:
         this.player1Up = true;
         return;
@@ -72,13 +78,13 @@ export class Game extends PureComponent {
         return;
 
       case settings.player1Launch:
-        if (startPlayer === 'player1') {
+        if (startPlayer === PLAYER_LEFT) {
           this.stage = 'start';
         }
         return;
 
       case settings.player2Launch:
-        if (startPlayer === 'player2') {
+        if (startPlayer === PLAYER_RIGHT) {
           this.stage = 'start';
         }
         return;
@@ -88,10 +94,10 @@ export class Game extends PureComponent {
     }
   };
 
-  keyUp = (e) => {
+  handleKeyUp = (event) => {
     const { settings } = this.props;
 
-    switch (e.code) {
+    switch (event.code) {
       case settings.player1Up:
         this.player1Up = false;
         return;
@@ -113,7 +119,100 @@ export class Game extends PureComponent {
     }
   };
 
-  resize = () => {
+  handlePlayer1Down = (event) => {
+    const { pageX, pageY, pointerId } = event;
+    const { player1Height, playerOffset, playerWidth, startPlayer } = this.props;
+    const { player1Y } = this.state;
+
+    const left = playerOffset * this.windowWidth / 100;
+    const top = player1Y * this.windowHeight / 100;
+    const width = playerWidth * this.windowHeight / 100;
+    const height = player1Height * this.windowHeight / 100;
+
+    if (left <= pageX && left + width >= pageX && top <= pageY && top + height >= pageY)  {
+      this.touches[pointerId] = { offsetY: pageY - top, pageY, player: PLAYER_LEFT };
+      this.player1Touch = pointerId;
+    } else if (pageX < this.windowWidth / 2 && startPlayer === PLAYER_LEFT) {
+      this.stage = 'start';
+    }
+  };
+
+  handlePlayer2Down = (event) => {
+    const { pageX, pageY, pointerId } = event;
+    const { player2Height, playerOffset, playerWidth, startPlayer } = this.props;
+    const { player2Y } = this.state;
+
+    const right = this.windowWidth - playerOffset * this.windowWidth / 100;
+    const top = player2Y * this.windowHeight / 100;
+    const width = playerWidth * this.windowHeight / 100;
+    const height = player2Height * this.windowHeight / 100;
+
+    if (right - width <= pageX && right >= pageX && top <= pageY && top + height >= pageY)  {
+      this.touches[pointerId] = { offsetY: pageY - top, pageY, player: PLAYER_RIGHT };
+      this.player2Touch = pointerId;
+    } else if (pageX > this.windowWidth / 2 && startPlayer === PLAYER_RIGHT) {
+      this.stage = 'start';
+    }
+  };
+
+  handlePlayer1Move = (event) => {
+    const { pageY, pointerId } = event;
+
+    const touch = this.touches[pointerId];
+    if (touch && touch.player === PLAYER_LEFT) {
+      const { player1Y } = this.state;
+      const top = player1Y * this.windowHeight / 100;
+
+      if (top + touch.offsetY - pageY > 0 && pageY < touch.pageY) {
+        this.player1Down = false;
+        this.player1Up = true;
+      } else if (top + touch.offsetY - pageY < 0 && pageY > touch.pageY) {
+        this.player1Down = true;
+        this.player1Up = false;
+      }
+      touch.pageY = pageY;
+    }
+  };
+
+  handlePlayer2Move = (event) => {
+    const { pageY, pointerId } = event;
+
+    const touch = this.touches[pointerId];
+    if (touch && touch.player === PLAYER_RIGHT) {
+      const { player2Y } = this.state;
+      const top = player2Y * this.windowHeight / 100;
+
+
+      if (top + touch.offsetY - pageY > 0 && pageY < touch.pageY) {
+        this.player2Down = false;
+        this.player2Up = true;
+      } else if (top + touch.offsetY - pageY < 0 && pageY > touch.pageY) {
+        this.player2Down = true;
+        this.player2Up = false;
+      }
+      touch.pageY = pageY;
+    }
+  };
+
+  handlePointerUp = (event) => {
+    const { pointerId } = event;
+
+    const touch = this.touches[pointerId];
+    if (touch) {
+      if (touch.player === PLAYER_LEFT) {
+        this.player1Down = false;
+        this.player1Up = false;
+        this.player1Touch = null;
+      } else if (touch.player === PLAYER_RIGHT) {
+        this.player2Down = false;
+        this.player2Up = false;
+        this.player2Touch = null;
+      }
+      delete this.touches[pointerId];
+    }
+  };
+
+  handleResize = () => {
     const { ballWidth, playerWidth, player1Height, player2Height } = this.props;
 
     this.windowWidth = window.innerWidth;
@@ -148,7 +247,7 @@ export class Game extends PureComponent {
 
   constructor(props) {
     super(props);
-    this.resize();
+    this.handleResize();
     this.state.ballSpeed = props.ballSpeed;
     this.state.player1Y = 50 - props.player1Height / 2;
     this.state.player2Y = 50 - props.player2Height / 2;
@@ -210,9 +309,9 @@ export class Game extends PureComponent {
   }
 
   componentDidMount() {
-    window.addEventListener('keydown', this.keyDown);
-    window.addEventListener('keyup', this.keyUp);
-    window.addEventListener('resize', this.resize);
+    window.addEventListener('keydown', this.handleKeyDown);
+    window.addEventListener('keyup', this.handleKeyUp);
+    window.addEventListener('resize', this.handleResize);
     requestAnimationFrame(this.step);
   }
 
@@ -230,6 +329,7 @@ export class Game extends PureComponent {
     const { ballSpeed, player1Y, player2Y } = state;
     const newState = {};
 
+    // New player 1 position.
     if (this.player1Down && !this.player1Up) {
       newState.player1Y = Math.min(player1Y + delta * player1Speed, 100 - player1Height);
     } else if (!this.player1Down && this.player1Up) {
@@ -238,6 +338,7 @@ export class Game extends PureComponent {
       newState.player1Y = player1Y;
     }
 
+    // New player 2 position.
     if (this.player2Down && !this.player2Up) {
       newState.player2Y = Math.min(player2Y + delta * player2Speed, 100 - player2Height);
     } else if (!this.player2Down && this.player2Up) {
@@ -246,22 +347,56 @@ export class Game extends PureComponent {
       newState.player2Y = player2Y;
     }
 
+    // Stop player 1 movement and if position has reached its goal (touch).
+    if (this.player1Touch) {
+      const touch = this.touches[this.player1Touch];
+      if (touch && newState.player1Y * this.windowHeight / 100 > touch.pageY - touch.offsetY && this.player1Down) {
+        this.player1Down = false;
+        newState.player1Y = (touch.pageY - touch.offsetY) * 100 / this.windowHeight;
+      } else if (touch && newState.player1Y * this.windowHeight / 100 < touch.pageY - touch.offsetY && this.player1Up) {
+        this.player1Up = false;
+        newState.player1Y = (touch.pageY - touch.offsetY) * 100 / this.windowHeight;
+      }
+    }
+
+    // Stop player 2 movement and if position has reached its goal (touch).
+    if (this.player2Touch) {
+      const touch = this.touches[this.player2Touch];
+      if (touch && newState.player2Y * this.windowHeight / 100 > touch.pageY - touch.offsetY && this.player2Down) {
+        this.player2Down = false;
+        newState.player2Y = (touch.pageY - touch.offsetY) * 100 / this.windowHeight;
+      } else if (touch && newState.player2Y * this.windowHeight / 100 < touch.pageY - touch.offsetY && this.player2Up) {
+        this.player2Up = false;
+        newState.player2Y = (touch.pageY - touch.offsetY) * 100 / this.windowHeight;
+      }
+    }
+
     if (this.stage === 'start') {
+      // Check for collisions.
       this.checkCollision({...state}, newState, delta);
       
       // Collision with left or right sides.
       if (newState.ballX <= 0) {
-        this.onEnd('player2');
+        this.onEnd(PLAYER_RIGHT);
         newState.ballSpeed =  this.props.ballSpeed;
+        newState.sound = {
+          note: 'A3',
+          key: state.sound ? state.sound.key + 1 : 0
+        };
       } else
       if (newState.ballX >= this.maxWidth) {
-        this.onEnd('player1');
+        this.onEnd(PLAYER_LEFT);
         newState.ballSpeed =  this.props.ballSpeed;
+        newState.sound = {
+          note: 'A3',
+          key: state.sound ? state.sound.key + 1 : 0
+        };
       } else {
         newState.ballSpeed =  ballSpeed + ballAcceleration * delta / 1000;
       }
     } else if (this.stage === 'init') {
-      if (this.props.startPlayer === 'player1') {
+      // Move ball accordingly to player movement.
+      if (this.props.startPlayer === PLAYER_LEFT) {
         newState.ballX = playerOffset * this.windowWidth / 100 + (playerWidth + ballOffset) * this.windowHeight / 100;
         newState.ballY = (newState.player1Y + player1Height / 2 - ballWidth / 2) * this.windowHeight / 100;
         newState.ballAngle = Math.PI / 6;
@@ -282,7 +417,7 @@ export class Game extends PureComponent {
 
 
 
-  getPlayerCollision(state, newState, radius, tEY1, tEY2, playerHeight, left, stop) {
+  getPlayerCollision(state, newState, radius, tEY1, tEY2, playerHeight, left) {
     let { ballWidth, playerWidth, playerOffset } = this.props;
     const { ballAngle, ballX: x1, ballY: y1 } = state;
     const { ballX: x2, ballY: y2 } = newState;
@@ -361,7 +496,6 @@ export class Game extends PureComponent {
       const incidenceAngle = Math.PI / 2 - ballAngle + contactAngle;
       const newBallAngle = ballAngle + Math.PI + 2 * incidenceAngle;
 
-      stop && (newState.contact = 1);
       // Set state.
       return {
         ballAngle: newBallAngle,
@@ -410,17 +544,12 @@ export class Game extends PureComponent {
     const { onEnd } = this.props;
     this.stage = 'end';
     setTimeout(() => onEnd(winner), END_TIMEOUT);
-    this.setState(state => ({
-      sound: {
-        note: 'A3',
-        key: state.sound ? state.sound.key + 1 : 0
-      }
-    }))
   }
 
   render() {
     const { ballWidth, playerOffset, playerWidth, player1Height, player2Height } = this.props;
     const { ballX, ballY, player1Y, player2Y, sound } = this.state;
+
     const gameStyle = {
       background: 'black',
       overflow: 'hidden',
@@ -429,14 +558,78 @@ export class Game extends PureComponent {
       height: '100vh',
     };
 
+    const player1TouchAreaStyle = {
+      position: 'absolute',
+      top: '0',
+      left: '0',
+      width: '50vw',
+      height: '100vh',
+    };
+
+    const player2TouchAreaStyle = {
+      position: 'absolute',
+      top: '0',
+      right: '0',
+      width: '50vw',
+      height: '100vh',
+    };
+
     return (
-      <div style={gameStyle}>
-        <Player color="white" playerHeight={player1Height} playerOffset={playerOffset} playerWidth={playerWidth} playerY={player1Y} position={PLAYER_LEFT} radius={this.r1} windowHeight={this.windowHeight} />
-        <Player color="white" playerHeight={player2Height} playerOffset={playerOffset} playerWidth={playerWidth} playerY={player2Y} position={PLAYER_RIGHT} radius={this.r2} windowHeight={this.windowHeight} />
-        {this.state.oldOldOldState && (<Ball ballWidth={ballWidth} ballY={this.state.oldOldOldState.ballY} ballX={this.state.oldOldOldState.ballX} color="white" opacity="0.2" />)}
-        {this.state.oldOldState && (<Ball ballWidth={ballWidth} ballY={this.state.oldOldState.ballY} ballX={this.state.oldOldState.ballX} color="white" opacity="0.4" />)}
-        {this.state.oldState && (<Ball ballWidth={ballWidth} ballY={this.state.oldState.ballY} ballX={this.state.oldState.ballX} color="white" opacity="0.6" />)}
+      <div style={gameStyle} >
+        <Player
+          color="white"
+          playerHeight={player1Height}
+          playerOffset={playerOffset}
+          playerWidth={playerWidth}
+          playerY={player1Y}
+          position={PLAYER_LEFT}
+          radius={this.r1}
+          windowHeight={this.windowHeight}
+        />
+        <Player
+          color="white"
+          playerHeight={player2Height}
+          playerOffset={playerOffset}
+          playerWidth={playerWidth}
+          playerY={player2Y}
+          position={PLAYER_RIGHT}
+          radius={this.r2}
+          windowHeight={this.windowHeight}
+        />
+        {this.state.oldOldOldState && (<Ball
+          ballWidth={ballWidth}
+          ballY={this.state.oldOldOldState.ballY}
+          ballX={this.state.oldOldOldState.ballX}
+          color="white"
+          opacity="0.2"
+        />)}
+        {this.state.oldOldState && (<Ball
+          ballWidth={ballWidth}
+          ballY={this.state.oldOldState.ballY}
+          ballX={this.state.oldOldState.ballX}
+          color="white"
+          opacity="0.4"
+        />)}
+        {this.state.oldState && (<Ball
+          ballWidth={ballWidth}
+          ballY={this.state.oldState.ballY}
+          ballX={this.state.oldState.ballX}
+          color="white"
+          opacity="0.6"
+        />)}
         <Ball ballWidth={ballWidth} ballY={ballY} ballX={ballX} color="white" />
+        <div
+          onPointerDown={this.handlePlayer1Down}
+          onPointerMove={this.handlePlayer1Move}
+          onPointerUp={this.handlePointerUp}
+          style={player1TouchAreaStyle}
+        />
+        <div
+          onPointerDown={this.handlePlayer2Down}
+          onPointerMove={this.handlePlayer2Move}
+          onPointerUp={this.handlePointerUp}
+          style={player2TouchAreaStyle}
+        />
         {sound && (<Oscillator {...sound}/>)}
       </div>
     );

@@ -1,5 +1,7 @@
 import React, { PureComponent } from 'react';
 
+import { PLAYER_LEFT, PLAYER_RIGHT } from '../../config/players';
+
 import { Fps } from '../Fps/Fps';
 import { Game } from '../Game/Game';
 import { Score } from '../Score/Score';
@@ -16,7 +18,7 @@ export class Manager extends PureComponent {
   state = {
     scorePlayer1: 0,
     scorePlayer2: 0,
-    startPlayer: 'player1',
+    startPlayer: PLAYER_LEFT,
     winner: false
   };
 
@@ -24,7 +26,7 @@ export class Manager extends PureComponent {
     this.setState({
       scorePlayer1: 0,
       scorePlayer2: 0,
-      startPlayer: 'player1',
+      startPlayer: PLAYER_LEFT,
       winner: false
     });
   };
@@ -32,18 +34,18 @@ export class Manager extends PureComponent {
   onEnd = winner => {
     const { settings: { firstTo } } = this.props;
 
-    if (winner === 'player1') {
+    if (winner === PLAYER_LEFT) {
       this.setState(state => {
         const scorePlayer1 = state.scorePlayer1 + 1;
         if (scorePlayer1 < firstTo) {
           return {
             scorePlayer1,
-            startPlayer: 'player2'
+            startPlayer: PLAYER_RIGHT
           };
         }
         return {
           scorePlayer1,
-          winner: 'player1'
+          winner: PLAYER_LEFT
         }
       });
     } else {
@@ -52,12 +54,12 @@ export class Manager extends PureComponent {
         if (scorePlayer2 < firstTo) {
           return {
             scorePlayer2,
-            startPlayer: 'player1'
+            startPlayer: PLAYER_LEFT
           };
         }
         return {
           scorePlayer2,
-          winner: 'player2'
+          winner: PLAYER_RIGHT
         }
       });
     }
@@ -78,10 +80,10 @@ export class Manager extends PureComponent {
         />
         <Score scorePlayer1={scorePlayer1} scorePlayer2={scorePlayer2} />
         <div className="Manager__separator" />
-        {winner === 'player1' && (
+        {winner === PLAYER_LEFT && (
           <div className="Manager__win">Player 1 win</div>
         )}
-        {winner === 'player2' && (
+        {winner === PLAYER_RIGHT && (
           <div className="Manager__win">Player 2 win</div>
         )}
         {winner && (

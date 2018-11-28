@@ -1,7 +1,6 @@
 import React, { PureComponent } from 'react';
 
-export const PLAYER_LEFT = 'PLAYER_LEFT';
-export const PLAYER_RIGHT = 'PLAYER_RIGHT';
+import { PLAYER_LEFT, PLAYER_RIGHT } from '../../config/players';
 
 export class Player extends PureComponent {
 
