@@ -35,3 +35,13 @@
   bottom: 5vh;
   transform: translateX(-50%);
 }
+
+@media (max-width: 768px) {
+  .Manager__win {
+    font-size: 200%;
+  }
+
+  .Manager__restart {
+    font-size: 150%;
+  }
+}

@@ -19,8 +19,12 @@
   display: flex;
   flex-direction: column;
   height: 100vh;
-  padding: 10vh 10vw;
+  padding: 5vh 10vw;
   width: 100vw;
+}
+
+.Settings__title {
+  margin: 0 0 2vh;
 }
 
 .Settings__form {
