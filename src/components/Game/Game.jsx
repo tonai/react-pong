@@ -34,6 +34,9 @@ export class Game extends PureComponent {
     ballSpeed: 0,
     ballX: 0,
     ballY: 0,
+    oldOldOldState: null,
+    oldOldState: null,
+    oldState: null,
     player1Y: 0,
     player2Y: 0,
     sound: null
@@ -56,7 +59,7 @@ export class Game extends PureComponent {
   maxHeight = 0;
 
   time = null;
-  stage = 'init';
+  stage = null;
 
   handleKeyDown = (event) => {
     const { settings, startPlayer } = this.props;
@@ -79,13 +82,13 @@ export class Game extends PureComponent {
         return;
 
       case settings.player1Launch:
-        if (startPlayer === PLAYER_LEFT) {
+        if (startPlayer === PLAYER_LEFT && this.stage === 'init') {
           this.stage = 'start';
         }
         return;
 
       case settings.player2Launch:
-        if (startPlayer === PLAYER_RIGHT) {
+        if (startPlayer === PLAYER_RIGHT && this.stage === 'init') {
           this.stage = 'start';
         }
         return;
@@ -133,7 +136,7 @@ export class Game extends PureComponent {
     if (left <= pageX && left + width >= pageX && top <= pageY && top + height >= pageY)  {
       this.touches[pointerId] = { offsetY: pageY - top, pageY, player: PLAYER_LEFT };
       this.player1Touch = pointerId;
-    } else if (pageX < this.windowWidth / 2 && startPlayer === PLAYER_LEFT) {
+    } else if (pageX < this.windowWidth / 2 && startPlayer === PLAYER_LEFT && this.stage === 'init') {
       this.stage = 'start';
     }
   };
@@ -151,7 +154,7 @@ export class Game extends PureComponent {
     if (right - width <= pageX && right >= pageX && top <= pageY && top + height >= pageY)  {
       this.touches[pointerId] = { offsetY: pageY - top, pageY, player: PLAYER_RIGHT };
       this.player2Touch = pointerId;
-    } else if (pageX > this.windowWidth / 2 && startPlayer === PLAYER_RIGHT) {
+    } else if (pageX > this.windowWidth / 2 && startPlayer === PLAYER_RIGHT && this.stage === 'init') {
       this.stage = 'start';
     }
   };
@@ -249,7 +252,6 @@ export class Game extends PureComponent {
   constructor(props) {
     super(props);
     this.handleResize();
-    this.state.ballSpeed = props.ballSpeed;
     this.state.player1Y = 50 - props.player1Height / 2;
     this.state.player2Y = 50 - props.player2Height / 2;
   }
@@ -313,10 +315,14 @@ export class Game extends PureComponent {
     window.addEventListener('keydown', this.handleKeyDown);
     window.addEventListener('keyup', this.handleKeyUp);
     window.addEventListener('resize', this.handleResize);
-    requestAnimationFrame(this.step);
+    this.init();
   }
 
   componentDidUpdate(prevProps) {
+    if (this.stage === 'reset') {
+      this.stage = 'init';
+      requestAnimationFrame(this.step);
+    }
     if (prevProps.gameKey !== this.props.gameKey) {
       this.init();
     }
@@ -325,8 +331,27 @@ export class Game extends PureComponent {
     }
   }
 
+  getBallStateOnInitPhase(state, player) {
+    const { ballOffset, ballWidth, player1Height, player2Height, playerOffset, playerWidth } = this.props;
+    const { player1Y, player2Y } = state;
+
+    if (player === PLAYER_LEFT) {
+      return {
+        ballAngle: Math.PI / 6,
+        ballX: playerOffset * this.windowWidth / 100 + (playerWidth + ballOffset) * this.windowHeight / 100,
+        ballY: (player1Y + player1Height / 2 - ballWidth / 2) * this.windowHeight / 100
+      };
+    }
+
+    return {
+      ballAngle: 5 * Math.PI / 6,
+      ballX: this.windowWidth - playerOffset * this.windowWidth / 100 - (playerWidth + ballOffset) * this.windowHeight / 100 - ballWidth * this.windowHeight / 100,
+      ballY: (player2Y + player2Height / 2 - ballWidth / 2) * this.windowHeight / 100
+    };
+  }
+
   getState(delta, state) {
-    const { ballAcceleration, ballOffset, ballWidth, player1Height, player1Speed, player2Height, player2Speed, playerWidth, playerOffset } = this.props;
+    const { ballAcceleration, player1Height, player1Speed, player2Height, player2Speed, } = this.props;
     const { ballSpeed, player1Y, player2Y } = state;
     const newState = {};
 
@@ -379,7 +404,6 @@ export class Game extends PureComponent {
       // Collision with left or right sides.
       if (newState.ballX <= 0) {
         this.onEnd(PLAYER_RIGHT);
-        newState.ballSpeed =  this.props.ballSpeed;
         newState.sound = {
           note: 'A3',
           key: state.sound ? state.sound.key + 1 : 0
@@ -387,7 +411,6 @@ export class Game extends PureComponent {
       } else
       if (newState.ballX >= this.maxWidth) {
         this.onEnd(PLAYER_LEFT);
-        newState.ballSpeed =  this.props.ballSpeed;
         newState.sound = {
           note: 'A3',
           key: state.sound ? state.sound.key + 1 : 0
@@ -397,15 +420,10 @@ export class Game extends PureComponent {
       }
     } else if (this.stage === 'init') {
       // Move ball accordingly to player movement.
-      if (this.props.startPlayer === PLAYER_LEFT) {
-        newState.ballX = playerOffset * this.windowWidth / 100 + (playerWidth + ballOffset) * this.windowHeight / 100;
-        newState.ballY = (newState.player1Y + player1Height / 2 - ballWidth / 2) * this.windowHeight / 100;
-        newState.ballAngle = Math.PI / 6;
-      } else {
-        newState.ballX = this.windowWidth - playerOffset * this.windowWidth / 100 - (playerWidth + ballOffset) * this.windowHeight / 100 - ballWidth * this.windowHeight / 100;
-        newState.ballY = (newState.player2Y + player2Height / 2 - ballWidth / 2) * this.windowHeight / 100;
-        newState.ballAngle = 5 * Math.PI / 6;
-      }
+      const { ballAngle, ballX, ballY } = this.getBallStateOnInitPhase(newState, this.props.startPlayer);
+      newState.ballAngle = ballAngle;
+      newState.ballX = ballX;
+      newState.ballY = ballY;
     }
     
     // Save previous state.
@@ -415,8 +433,6 @@ export class Game extends PureComponent {
 
     return newState;
   }
-
-
 
   getPlayerCollision(state, newState, radius, tEY1, tEY2, playerHeight, left) {
     let { ballWidth, playerWidth, playerOffset } = this.props;
@@ -537,8 +553,16 @@ export class Game extends PureComponent {
   }
 
   init() {
-    this.stage = 'init';
-    requestAnimationFrame(this.step);
+    const { ballSpeed, startPlayer } = this.props;
+    this.stage = 'reset';
+    this.setState(state => ({
+      ...this.getBallStateOnInitPhase(state, startPlayer),
+      ballSpeed,
+      oldOldOldState: null,
+      oldOldState: null,
+      oldState: null,
+      sound: null
+    }));
   }
 
   onEnd(winner) {
