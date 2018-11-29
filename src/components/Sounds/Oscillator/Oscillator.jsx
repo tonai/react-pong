@@ -2,6 +2,8 @@ import { PureComponent } from 'react';
 
 import { noteValues } from '../../../config/noteValues';
 
+import { audioContext } from '../../../services/audioContext';
+
 export class Oscillator extends PureComponent {
 
   static defaultProps = {
@@ -12,16 +14,15 @@ export class Oscillator extends PureComponent {
 
   componentDidMount() {
     const { duration, note, type } = this.props;
-    const context = new AudioContext();
-    const oscillator = context.createOscillator();
-    const gain = context.createGain();
+    const oscillator = audioContext.createOscillator();
+    const gain = audioContext.createGain();
 
     oscillator.type = type;
     oscillator.frequency.value = noteValues[note];
     oscillator.connect(gain);
-    gain.connect(context.destination);
+    gain.connect(audioContext.destination);
     oscillator.start();
-    gain.gain.exponentialRampToValueAtTime(0.00001, duration);
+    gain.gain.exponentialRampToValueAtTime(0.00001, audioContext.currentTime + duration);
   }
 
   render() {
