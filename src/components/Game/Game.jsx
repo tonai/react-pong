@@ -5,8 +5,9 @@ import { PLAYER_LEFT, PLAYER_RIGHT } from '../../config/players';
 import { getContactPointWithCircle, getContactPointWithHLine, getContactPointWithPoint } from '../../services/collisionManager';
 
 import { Ball } from '../Ball/Ball';
-import { Player } from '../Player/Player';
+import { IA } from '../IA/IA';
 import { Oscillator } from '../Sounds/Oscillator/Oscillator';
+import { Player } from '../Player/Player';
 
 const END_TIMEOUT = 500;
 
@@ -547,7 +548,7 @@ export class Game extends PureComponent {
   }
 
   render() {
-    const { ballWidth, playerOffset, playerWidth, player1Height, player2Height } = this.props;
+    const { ballWidth, playerOffset, playerWidth, player1Height, player2Height, settings } = this.props;
     const { ballX, ballY, player1Y, player2Y, sound } = this.state;
 
     const gameStyle = {
@@ -630,6 +631,13 @@ export class Game extends PureComponent {
           onPointerUp={this.handlePointerUp}
           style={player2TouchAreaStyle}
         />
+        {settings.player2IA && this.state.oldState && (<IA
+          ballY={ballY * 100 / this.windowHeight}
+          oldBallY={this.state.oldState.ballY * 100 / this.windowHeight}
+          playerY={player2Y}
+          playerHeight={player2Height}
+          settings={settings}
+        />)}
         {sound && (<Oscillator {...sound}/>)}
       </div>
     );

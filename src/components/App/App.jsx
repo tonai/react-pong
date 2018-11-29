@@ -13,6 +13,7 @@ export class App extends PureComponent {
       player1Up: 'KeyW',
       player1Down: 'KeyS',
       player1Launch: 'Space',
+      player2IA: false,
       player2Up: 'ArrowUp',
       player2Down: 'ArrowDown',
       player2Launch: 'Enter'

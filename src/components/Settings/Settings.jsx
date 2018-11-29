@@ -10,6 +10,12 @@ export class Settings extends Component {
     onSettingsChange && onSettingsChange(name, value);
   };
 
+  onCheckChange = event => {
+    const { onSettingsChange } = this.props;
+    const { checked, name } = event.target;
+    onSettingsChange && onSettingsChange(name, checked);
+  };
+
   onKeyDown = event => {
     const { onSettingsChange } = this.props;
     const { nativeEvent: { code }, target: { name } } = event;
@@ -37,7 +43,7 @@ export class Settings extends Component {
               <div className="Settings__group">
                 <div className="Settings__field">
                   <label className="Settings__label" htmlFor="player1-up">First to</label>
-                  <input className="Settings__input" id="player1-up" max="9" min="1" name="firstTo" onChange={this.onChange} type="number" value={settings.firstTo} />
+                  <input className="Settings__input" id="first-to" max="9" min="1" name="firstTo" onChange={this.onChange} type="number" value={settings.firstTo} />
                 </div>
               </div>
             </fieldset>
@@ -62,16 +68,22 @@ export class Settings extends Component {
               <legend className="Settings__legend">Keys player 2</legend>
               <div className="Settings__group">
                 <div className="Settings__field">
+                  <label className="Settings__label" htmlFor="player2-ia">IA</label>
+                  <div className="Settings__input">
+                    <input checked={settings.player2IA} id="player2-ia" name="player2IA" onChange={this.onCheckChange} type="checkbox" />
+                  </div>
+                </div>
+                <div className="Settings__field">
                   <label className="Settings__label" htmlFor="player2-up">Up</label>
-                  <input className="Settings__input" id="player2-up" name="player2Up" onKeyDown={this.onKeyDown} value={settings.player2Up} />
+                  <input className="Settings__input" disabled={settings.player2IA} id="player2-up" name="player2Up" onKeyDown={this.onKeyDown} value={settings.player2Up} />
                 </div>
                 <div className="Settings__field">
                   <label className="Settings__label" htmlFor="player2-down">Down</label>
-                  <input className="Settings__input" id="player2-down" name="player2Down" onKeyDown={this.onKeyDown} value={settings.player2Down} />
+                  <input className="Settings__input" disabled={settings.player2IA} id="player2-down" name="player2Down" onKeyDown={this.onKeyDown} value={settings.player2Down} />
                 </div>
                 <div className="Settings__field">
                   <label className="Settings__label" htmlFor="player2-launch">Launch</label>
-                  <input className="Settings__input" id="player2-launch" name="player2Launch" onKeyDown={this.onKeyDown} value={settings.player2Launch} />
+                  <input className="Settings__input" disabled={settings.player2IA} id="player2-launch" name="player2Launch" onKeyDown={this.onKeyDown} value={settings.player2Launch} />
                 </div>
               </div>
             </fieldset>
