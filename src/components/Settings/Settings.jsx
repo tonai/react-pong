@@ -42,7 +42,7 @@ export class Settings extends Component {
               <legend className="Settings__legend">Game</legend>
               <div className="Settings__group">
                 <div className="Settings__field">
-                  <label className="Settings__label" htmlFor="player1-up">First to</label>
+                  <label className="Settings__label" htmlFor="first-to">First to</label>
                   <input className="Settings__input" id="first-to" max="9" min="1" name="firstTo" onChange={this.onChange} type="number" value={settings.firstTo} />
                 </div>
               </div>
