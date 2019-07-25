@@ -81,15 +81,12 @@ export function getContactPointWithCircle(pX1, pY1, pX2, pY2, pR, bX1, bY1, bX2,
   const pY = pY2 - (pY2 - pY1) * n;
 
   // Check that the ball direction is from player external to player internal.
-  const dC2B1 = Math.sqrt(Math.pow((bXSol2 - bX1), 2) + Math.pow((bYSol2 - bY1), 2));
-  const dC2B2 = Math.sqrt(Math.pow((bXSol2 - bX2), 2) + Math.pow((bYSol2 - bY2), 2));
-  const dC1B2 = Math.sqrt(Math.pow((bXSol1 - bX2), 2) + Math.pow((bYSol1 - bY2), 2));
-
-  if (dC2B1 > dC2B2 || dC1B2 > dC2B2) {
-    return { bX, bY, n: 1 - n, pX, pY };
+  const dP1B1 = Math.sqrt(Math.pow((pX1 - bX1), 2) + Math.pow((pY1 - bY1), 2));
+  if (dP1B1 < pR + bR) {
+    return { n: Infinity };
   }
 
-  return { n: Infinity };
+  return { bX, bY, n: 1 - n, pX, pY };
 }
 
 export function getContactPointWithHLine(y, bX1, bY1, bX2, bY2, bR, bottomToTop) {
@@ -120,7 +117,7 @@ export function getContactPointWithHLine(y, bX1, bY1, bX2, bY2, bR, bottomToTop)
   return { bX, bY, n: 1 - n };
 }
 
-export function getContactPointWithPoint(pX1, pY1, pX2, pY2, bX1, bY1, bX2, bY2, bR) {
+export function getContactPointWithPoint(pX1, pY1, pX2, pY2, bX1, bY1, bX2, bY2, bR, playerX1, playerY1, pR) {
   // Input data :
   // Point start point = pX1,pY1
   // Point end point = pX2,pY2
@@ -202,15 +199,12 @@ export function getContactPointWithPoint(pX1, pY1, pX2, pY2, bX1, bY1, bX2, bY2,
   const pY = pY2 - (pY2 - pY1) * n;
 
   // Check that the ball direction is from player external to player internal.
-  const dC2B1 = Math.sqrt(Math.pow((bXSol2 - bX1), 2) + Math.pow((bYSol2 - bY1), 2));
-  const dC2B2 = Math.sqrt(Math.pow((bXSol2 - bX2), 2) + Math.pow((bYSol2 - bY2), 2));
-  const dC1B2 = Math.sqrt(Math.pow((bXSol1 - bX2), 2) + Math.pow((bYSol1 - bY2), 2));
-
-  if (dC2B1 > dC2B2 || dC1B2 > dC2B2) {
-    return { bX, bY, n: 1 - n, pX, pY };
+  const dP1B1 = Math.sqrt(Math.pow((playerX1 - bX1), 2) + Math.pow((playerY1 - bY1), 2));
+  if (dP1B1 < pR + bR) {
+    return { n: Infinity };
   }
 
-  return { n: Infinity };
+  return { bX, bY, n: 1 - n, pX, pY };
 }
 
 export function solvePolynomial(a, b, c) {

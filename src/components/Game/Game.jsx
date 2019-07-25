@@ -256,7 +256,7 @@ export class Game extends PureComponent {
     this.state.player2Y = 50 - props.player2Height / 2;
   }
 
-  checkCollision(state, newState, delta) {
+  checkCollision(state, newState, delta, pastCollisions = []) {
     const { player1Height, player2Height } = this.props;
     const { ballAngle, ballSpeed, ballX, ballY, player1Y, player2Y } = state;
 
@@ -267,36 +267,44 @@ export class Game extends PureComponent {
     const collisions = [];
 
     // Collision with top or bottom sides.
-    collisions[0] = this.getWindowCollision(state, newState, 0);
-    collisions[1] = this.getWindowCollision(state, newState, this.windowHeight);
+    if (pastCollisions.indexOf(0) === -1) {
+      collisions[0] = this.getWindowCollision(state, newState, 0);
+    }
+    if (pastCollisions.indexOf(1) === -1) {
+      collisions[1] = this.getWindowCollision(state, newState, this.windowHeight);
+    }
 
     // Collision with player1.
-    collisions[2] = this.getPlayerCollision(
-      state,
-      newState,
-      this.r1,
-      player1Y * this.windowHeight / 100,
-      newState.player1Y * this.windowHeight / 100,
-      player1Height * this.windowHeight / 100,
-      true
-    );
+    if (pastCollisions.indexOf(2) === -1) {
+      collisions[2] = this.getPlayerCollision(
+        state,
+        newState,
+        this.r1,
+        player1Y * this.windowHeight / 100,
+        newState.player1Y * this.windowHeight / 100,
+        player1Height * this.windowHeight / 100,
+        true
+      );
+    }
 
     // Collision with player2.
-    collisions[3] = this.getPlayerCollision(
-      state,
-      newState,
-      this.r2,
-      player2Y * this.windowHeight / 100,
-      newState.player2Y * this.windowHeight / 100,
-      player2Height * this.windowHeight / 100,
-      false
-    );
+    if (pastCollisions.indexOf(3) === -1) {
+      collisions[3] = this.getPlayerCollision(
+        state,
+        newState,
+        this.r2,
+        player2Y * this.windowHeight / 100,
+        newState.player2Y * this.windowHeight / 100,
+        player2Height * this.windowHeight / 100,
+        false
+      );
+    }
 
     const hasCollision = collisions.some(collision => collision.n !== Infinity);
     if (hasCollision) {
-      const { ballAngle, ballX, ballY, n, sound } = collisions.reduce((acc, collision) => {
+      const { ballAngle, ballX, ballY, index, n, sound } = collisions.reduce((acc, collision, index) => {
         if (collision.n < acc.n) {
-          acc = collision;
+          acc = { ...collision, index };
         }
         return acc;
       }, { n: Infinity });
@@ -307,7 +315,8 @@ export class Game extends PureComponent {
         ...sound,
         key: state.sound ? state.sound.key + 1 : 0
       };
-      this.checkCollision(state, newState, delta * (1 - n), true)
+      pastCollisions.push(index);
+      this.checkCollision(state, newState, delta * (1 - n), pastCollisions)
     }
   }
 
@@ -456,6 +465,11 @@ export class Game extends PureComponent {
     const bX2 = x2 + ballRadius;
     const bY2 = y2 + ballRadius;
 
+    // Continue only if th ball is going from the right direction.
+    if (!left && bX2 - bX1 < 0 || left && bX2 - bX1 > 0) {
+      return { n: Infinity };
+    }
+
     const cPWC = getContactPointWithCircle(pX1, pY1, pX1, pY2, radius, bX1, bY1, bX2, bY2, ballRadius);
     // Continue if contact point is inside the player arc.
     if (cPWC.n !== Infinity && cPWC.bY + ballRadius >= cPWC.pY - playerHeight / 2 && cPWC.bY - ballRadius <= cPWC.pY + playerHeight / 2) {
@@ -479,7 +493,7 @@ export class Game extends PureComponent {
     // Top extremity.
     const eX1 = left ? playerOffset : this.windowWidth - playerOffset;
 
-    const cPWPT = getContactPointWithPoint(eX1, tEY1, eX1, tEY2, bX1, bY1, bX2, bY2, ballRadius);
+    const cPWPT = getContactPointWithPoint(eX1, tEY1, eX1, tEY2, bX1, bY1, bX2, bY2, ballRadius, pX1, pY1, radius);
     // Check if collision with top extremity.
     if (cPWPT.n !== Infinity) {
       const { bX, bY, n } = cPWPT;
@@ -503,7 +517,7 @@ export class Game extends PureComponent {
     const bEY1 = tEY1 + playerHeight;
     const bEY2 = tEY2 + playerHeight;
 
-    const cPWPB = getContactPointWithPoint(eX1, bEY1, eX1, bEY2, bX1, bY1, bX2, bY2, ballRadius);
+    const cPWPB = getContactPointWithPoint(eX1, bEY1, eX1, bEY2, bX1, bY1, bX2, bY2, ballRadius, pX1, pY1, radius);
     // Check if collision with top extremity.
     if (cPWPB.n !== Infinity) {
       const { bX, bY, n } = cPWPB ;
