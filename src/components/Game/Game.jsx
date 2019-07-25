@@ -466,7 +466,7 @@ export class Game extends PureComponent {
     const bY2 = y2 + ballRadius;
 
     // Continue only if th ball is going from the right direction.
-    if (!left && bX2 - bX1 < 0 || left && bX2 - bX1 > 0) {
+    if ((!left && bX2 - bX1 < 0) || (left && bX2 - bX1 > 0)) {
       return { n: Infinity };
     }
 
